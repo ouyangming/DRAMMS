@@ -1,7 +1,7 @@
 DRAMMS
 ======
 
-A Generic Medical Image Registration Toolbox
+*** A Generic Medical Image Registration Toolbox ***
 
 
 
