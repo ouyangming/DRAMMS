@@ -1,7 +1,9 @@
 DRAMMS
 ======
 
-*** A Generic Medical Image Registration Toolbox ***
+
+A Generic Medical Image Registration Toolbox 
+----------------------------------------------------
 
 
 
@@ -10,15 +12,15 @@ DRAMMS is a software package designed for 2D-to-2D and 3D-to-3D medical image re
 
 
 
-  Some typical applications of DRAMMS include,
+..  Some typical applications of DRAMMS include,
 
-  -- Cross-subject registration of the same organ (can be brain, breast, cardiac, etc);
+..  -- Cross-subject registration of the same organ (can be brain, breast, cardiac, etc);
 
-  -- Mono- and Multi-modality registration (MRI, CT, histology);
+..  -- Mono- and Multi-modality registration (MRI, CT, histology);
 
-  -- Longitudinal registration (pediatric brain growth, cancer development, mouse brain development, etc);
+..  -- Longitudinal registration (pediatric brain growth, cancer development, mouse brain development, etc);
 
-  -- Registration under missing correspondences (e.g., vascular lesions, tumors, histological cuts).
+..  -- Registration under missing correspondences (e.g., vascular lesions, tumors, histological cuts).
 
 
 
