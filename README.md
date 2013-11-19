@@ -5,7 +5,10 @@ DRAMMS
 A Generic Medical Image Registration Toolbox 
 ----------------------------------------------------
 
-
+Download:     folder dramms-1.4.1 here
+              or
+              http://www.rad.upenn.edu/sbia/software/dramms/download.html
+Installation: http://www.rad.upenn.edu/sbia/software/dramms/installation.html
 
 
 DRAMMS is a software package designed for 2D-to-2D and 3D-to-3D medical image registration tasks.
