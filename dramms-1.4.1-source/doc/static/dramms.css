@@ -1,0 +1,67 @@
+/*
+Origin:   $URL: https://sbia-svn.uphs.upenn.edu/projects/DRAMMS/branches/dramms-1.4/doc/static/dramms.css $
+Revision: $Rev: 1903 $
+*/
+
+@import url('sbia.css');
+
+body {
+    min-width: 920px;
+}
+
+/* Examples & Tutorial Overview */
+table.exampletoctable {
+    width:         90%;
+    margin-left:    5%;
+    margin-right:   5%;
+    margin-top:    20px;
+    margin-bottom: 20px;
+}
+
+table.exampletoctable td, table.exampletoctable th {
+    border:          0px;
+    padding-top:     5px;
+    padding-bottom:  5px;
+    padding-left:   15px;
+    padding-right:  15px;
+    text-align:     center; /* left */
+}
+
+table.exampletoctable.brain3d img {
+    width: 100%;
+}
+
+table.exampletoctable.cases2d img, table.exampletoctable.cardiac3d img {
+    width: 75%; /* 100% */
+}
+
+table.exampletoctable.breast3d img, table.exampletoctable.prostate3d img {
+    width: 50%; /* 100% */
+}
+
+/* Size of email icons and flags on People page */
+#people img {
+    width: 20px;
+}
+
+/* Do not show the search tip as the default text does not work for DRAMMS */
+#searchbox h3 {
+    color: black;
+}
+
+.searchtip {
+    display: none
+}
+
+.red{
+	color: red;
+}
+
+.blue{
+	color: blue;
+}
+
+
+.underline {
+  text-decoration: underline;
+}

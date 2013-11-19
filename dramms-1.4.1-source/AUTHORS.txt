@@ -1,0 +1,90 @@
+
+  Section of Biomedical Image Analysis
+  Department of Radiology
+  University of Pennsylvania
+  3600 Market Street, Suite 380
+  Philadelphia, PA 19104
+
+  Web:   http://www.rad.upenn.edu/sbia/
+  Email: sbia-software at uphs.upenn.edu
+
+  Copyright (c) 2011-2013 University of Pennsylvania. All rights reserved.
+  See http://www.rad.upenn.edu/sbia/software/license.html or COPYING file.
+
+
+
+INTRODUCTION
+============
+
+  This document lists the authors of this software and further people who
+  significantly contributed to it.
+
+  See the README and COPYING documents for general information,
+  acknowledgements of contributions other kind, and licensing.
+
+
+
+SOFTWARE AUTHORS
+================
+
+  The original author of this software is:
+
+  - Yangming Ou         Yangming.Ou@uphs.upenn.edu
+
+
+
+SOFTWARE CONTRIBUTORS
+=====================
+
+  Listed below are the names of the ones who contributed notably to this software.
+
+  - Aristeidis Sotiras  Helped implement discrete optimization part based FastPD.
+
+  - Andreas Schuh       He greatly helped to improve the quality of the software and
+                        contributed implementations for reading and writing NIfTI-1
+                        images using the nifticlib library.
+
+
+
+ACKNOWLEDGEMENT
+===============
+
+  Discrete optimization part is based on Demo version of FastPD algorithm by
+ 
+  - Nikos Komodakis     http://www.csd.uoc.gr/~komod/FastPD/index.html
+  - Nikos Paragios
+ 
+  Gabor feature extraction and deformation data structures are based on code from
+ 
+  - Yiqiang Zhan
+  - Dinggang Shen
+ 
+
+  We sincerely thank all the following testers for their precious feedback and suggestions
+  during the development of DRAMMS software
+
+  within SBIA
+
+    Hamed Akbari
+    Harsha Battapady
+    Vanessa Clark
+    Xiao Da
+    Jimit Doshi
+    Harini Eavani 
+    Guray Erus
+    Bilwaj Gaonkar
+    Meng-Kang (Michael) Hsieh
+    Madhura Ingalhalikar
+    Dongjin Kwon
+    Drew Parker
+    Alex Smith
+    Erdem Varol
+    Steffen Wachenfeld
+    Dong Hye Ye
+
+  outside SBIA
+
+    Nikolaos Koutsouleris (Germany)
+    Helene Langet (France)
+    Lena Rademacher (Germany)
+    Marcus Zanetti (Brazil)

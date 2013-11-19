@@ -1,0 +1,19 @@
+- ConvertDeformation
+
+  * Make sure that conversion into ITK format is correct and that the resulting deformation
+    field can be used with ITK filters for warping images. For example, GLISTR, includes a
+    small program named WarpImage which takes an ITK deformation field and applies it to
+    an intensity image. It therefore uses the itk::WarpImageFilter.
+
+- DeformationOperation
+
+  * Add test for composition of affine transformation and deformation field in ITK format.
+  * Add more tests for the different usages of the program.
+
+- ComposeTransformations() in utilities.cxx
+
+  * Fix composition of affine transformation and deformation field to make it more general.
+    Rigth now it most likely only works for the use case of DRAMMS.
+  * Implement composition of deformation field and affine transformation, i.e.,
+    T o D, where T is an affine transformation and D is a deformation field.
+

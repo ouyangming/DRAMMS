@@ -1,0 +1,1591 @@
+#! /bin/bash
+
+##############################################################################
+# @file  dramms.sh
+# @brief Deformable Registration via Attribute Matching and Mutual-Saliency weighting
+#
+# Copyright (c) 2011-2013 University of Pennsylvania. All rights reserved.
+# See http://www.rad.upenn.edu/sbia/software/license.html or COPYING file.
+#
+# Contact: SBIA Group <sbia-software at uphs.upenn.edu>
+##############################################################################
+
+. ${BASIS_BASH_UTILITIES} || { echo "Failed to source BASIS utilities!" 1>&2; exit 1; }
+
+
+############################################
+#
+### Help
+#
+############################################
+
+print_help_short()
+{
+    local EXENAME && exename EXENAME
+    echo "Usage:"
+    echo "  $EXENAME -S <inputA.nii> -T <inputB.nii> -O <outimgA2B.nii> -D <outdefA2B.nii.gz> [options]"
+    echo "  or,"
+	echo "  $EXENAME --source <inputA.nii> --target <inputB.nii> --outimg <outimgA2B.nii> --outdef <outdefA2B.nii.gz> [options]"
+	echo
+    echo "Description:"
+    echo "  This program registers two input images (both 2D or both 3D), outputs the deformed image and the deformation field."
+    echo "  This script can also calculate RAVENS maps, Jacobian maps and warp another image from the obtained deformation."
+    echo ""
+    echo "  Accepted image formats are ANALYZE or Nifti. Accepted image datatype include byte, short(signed or unsigned)"
+    echo "  float, and int32."
+    echo
+    echo "Required input arguments:"
+    echo "  -S, --source  <char>    Source/Subject  image file."
+    echo "  -T, --target  <char>    Target/Template image file."
+    echo
+    echo "(Optional) output arguments:"
+    echo "  -O, --outimg  <char>    Output image file. The output image will be in target space. Exception: when RAVENS"
+    echo "                          calculation (-R option) is activated, output image will be source space, but RAVENS."
+    echo "                          maps will be in target space."
+    echo "  -D  --outdef  <char>    Output deformation field. It can be used to map (warp) other images from source"
+    echo "                          space to target space. "
+    echo
+    echo "Standard options:"  
+    echo "  -v, --verbose           Increase verbosity of output messages. Give twice (-v -v) for more verbose output."
+    echo "  -V, --version           Print version information and exit."
+    echo "  -h, --help              Print more options (parameters and Ravens/Jacobian/Warp functions)."
+    echo
+    echo "Example: "
+    echo "  Register image A to image B using default settings."
+	echo "      $EXENAME --source A.hdr  --target B.nii --outimg A2B.img --outdef B2A_def.nii.gz"
+    echo ""
+    echo "  Show more options for parameter settings and Warping/Jacobian/RAVENS usages."
+	echo "      $EXENAME --help"
+    echo
+    print_contact
+}
+
+
+
+print_help_detail()
+{
+    local EXENAME && exename EXENAME
+    echo "Usage:"
+    echo "  $EXENAME -S <inputA.nii> -T <inputB.nii> -O <outimgA2B.nii> -D <outdefA2B.nii.gz> [options]"
+    echo "  or,"
+	echo "  $EXENAME --source <inputA.nii> --target <inputB.nii> --outimg <outimgA2B.nii> --outdef <outdefA2B.nii.gz> [options]"
+	echo
+    echo "Description:"
+    echo "  This program registers two input images (both 2D or both 3D), outputs deformed image and deformation field."
+    echo "  This script can also calculate RAVENS maps, Jacobian maps and warp another image from obtained deformation."
+    echo
+    echo "  Accepted image formats are ANALYZE or Nifti. Accepted image datatype include byte, short(signed or unsigned)"
+    echo "  float, and int32."
+    echo
+    echo "Required input arguments:"
+    echo "  -S, --source  <char>    Source/Subject  image file."
+    echo "  -T, --target  <char>    Target/Template image file."
+    echo ""
+    echo "(Optional) output arguments:"
+    echo "  -O, --outimg  <char>    Output image file. The output image will be in target space. Exception: when RAVENS"
+    echo "                          calculation (-R option) is activated, output image will be source space, but RAVENS."
+    echo "                          maps will be in target space."
+    echo "  -D  --outdef  <char>    Output deformation field. It can be used to map (warp) other images from source"
+    echo "                          space to target space. "
+    echo
+    echo "Optional Parameters For Deformation Model:"
+    echo "  -x   <int>              FFD spacing in X direction (the number of voxels between two adjacent control points in X direction)."
+    echo "                          Larger spacing captures larger deformations; smaller spacing leads to higher accuracy in local"
+    echo "                          matching. (default: max([imageSizeX/50] 3) )"
+    echo "  -y   <int>              FFD spacing in Y direction (the number of voxels between two adjacent control points in Y direction)."
+    echo "                          Larger spacing captures larger deformations; smaller spacing leads to higher accuracy in local matching."
+    echo "                          (default: max([imageSizeY/50] 3) )"
+    echo "  -z   <int>              FFD spacing in Z direction (the number of voxels between two adjacent control points in X direction)."
+    echo "                          Larger spacing captures larger deformations; smaller spacing leads to higher accuracy in local matching."
+    echo "                          (default: max([imageSizeZ/60] 1) )"
+    echo "  -a   <int>              Affine registration prior to non-rigid deformation (1-on (default); 0-off);"
+	echo "  -u   <int>              How much memory to use. 3-most memory for highest possible accuracy (default); 2-less memory for slightly less accuracy; 1-even less memory, a bit more decrease in accuracy; 0-least amount of memory, but relatively big decrease in accuracy."
+	echo "  -M                      Force histogram matching (default is off, therefore the program will automatically decide whether to match histogram based on intensity distributions in the input images."
+	echo " "
+    echo "Optional Parameters For Similarity Defintion:"
+    echo "  -s   <int>              The number of scales for Gabor attributes (default: 3)"
+    echo "  -o   <int>              The number of orientations for Gabor attributes (default: 4)"
+    #echo "  -c   <int>              Use mutual-saliency weighting or not. (0-not use; 1-use but not save; 2-use and save mutual-saliency map."
+    #echo "                          It is recommended to use (1 or 2) it when registering images of outlier regions (eg, lesion, tumor, cuts, etc)."
+    #echo "                          (default: 0, for faster speed)"
+    echo "  -c   <int>              How to use mutual-saliency weighting. 0 (default) -- do not use mutual-saliency weighting if there is no outlier regions (lesions, cuts, etc); 1-- use but do not save mutual-saliency map; 2-- use and save mutual-saliency map"
+	echo "  -w   <int>              Similarity measure: 0-difference of attributes; 1-correlation coefficient of attributes."
+    echo "                          (default: 0))"
+    echo
+    echo "Optional Parameters For Discrete Optimization (only effective for 3D registration):"
+    echo "  -g   <float>            Regularization weight, usually 0~1 with larger value for smoother deformation."
+    echo "                          (default: 0.2  for registration"
+    echo "                                    0.15 for warping ROI (-W option)"
+    echo "                                    0.3  for RAVENS calculation (-R option))"
+    echo "  -n   <int>              The number of discrete samples in the discrete optimization."
+    echo "                          Larger value means denser sampling, hence more computational time and increased accuracy."
+    echo "                          (default: 5)"
+    echo "  -k   <int>              The maximum number of iterations at each resolution. (default: 10)"
+    echo "  -H   <int>              Rate to convert from global sraech to local search. (default: 0.5)"
+    echo "  -m   <int>              Interpolation of displacement at ordinary from control points."
+    echo "                          0-nearest neighbor; 1-trilinear; 2-cubic B-spline (default: 1)"
+    echo "  -f                      Request fast approximation only. If on, the program will finish faster with"
+    echo "                          less smooth deformation."
+    echo "  -e   <int>              Addition (0) or composition (1) of deformations. (default: 0)"
+    echo "  -t   <int>              Threshold for generating foreground mask for attribute extraction and for deformation."
+    echo "                          (default: 0)"
+    echo ""
+    echo "Optional Initialization Files for Registration:"
+    echo "  -b   <char>             Binary mask for foreground, i.e. only deform in the non-zero area in the mask."
+    echo "                          The given mask must be defined in template space with datatype byte. (default: NULL)"
+    echo "  -d   <char>             Initial deformation. (default: NULL)"
+    echo "  -i                      Save intermediate results (an unique intermediate result directory will be created automatically under the current directory). (default: off)"
+	echo "  -I   <char>             Use with -i to save intermediate results in a user-specified directory. (default: automatically-created subdirectory under the current working directory)"
+    echo
+    echo "To calculate Jacobian determinant right after having calculated deformation field:"
+    echo "  -J   <char>             Output Jacobian determinant image."
+    echo ""
+    echo "To calculate RAVENS maps:"
+    echo "  -R   <char>             Prefix of the output RAVENS maps. RAVENS maps will be saved with file basename"
+    echo "                          \${Prefix}_\${TissueLabel} for each tissue label given by -l option. Maps will"
+    echo "                          be saved as signed short datatype with a default scaling factor of 1000."
+    echo "                          When this option is given, the -L and -l options must be specified."
+    echo "  -L   <char>             Input tissue label map (in subject space). Required if -R option given."
+    echo "  -l   <int>[,<int>...]   Specify up to 5 tissue labels in the label map. Required if -R option given."
+    echo ""
+    echo "To warp another image in subject space using obtained deformation field:"
+    echo "  -W   <char>             Name of the warped image."
+    echo "  -L   <char>             Input image (in subject space) to be warped to template space such as a label map"
+    echo "                          or a functional image."
+    echo "  -r   <int>              Interpolation method when warping image: 0-neareast neighbor; 1-trilinear. (default: 1)"
+    echo ""
+    echo "Standard options:"  
+    echo "  -v, --verbose           Increase verbosity of output messages. Give twice (-v -v) for more verbose output."
+    echo "  -V, --version           Print version information and exit."
+    echo "  -h, --help              Print more options (parameters and Ravens/Jacobian/Warp functions)."
+    echo
+    echo "Example: "
+    echo "  Register image A to image B using default settings."
+	echo "      $EXENAME --source A.hdr  --target B.nii --outimg A2B.img --outdef B2A_def.nii.gz"
+    echo ""
+    echo "  Show more options for parameter settings and Warping/Jacobian/RAVENS usages."
+	echo "      $EXENAME --help"
+    echo
+    print_contact
+}
+
+# show help if called without arguments
+[ $# -eq 0 ] && print_help_short && exit 1
+
+############################################
+#
+### Constants
+#
+############################################
+
+export FSLOUTPUTTYPE=NIFTI_GZ   # have flirt output .nii.gz
+export PATH=/bin:/usr/bin:$PATH # ensure that bc of system is used
+                                # note that, for example, the IRTK includes a
+                                # a program for bias correction named bc!
+                                # http://www.doc.ic.ac.uk/~dr/software/
+
+timeProgramBegin=`date +%s` # time when program started
+
+############################################
+#
+### Auxiliary functions
+#
+############################################
+
+# ----------------------------------------------------------------------------
+# get image file name without extension
+prefix()
+{
+    local prefix=$1
+    prefix=${prefix%.hdr}
+    prefix=${prefix%.hdr.gz}
+    prefix=${prefix%.img}
+    prefix=${prefix%.img.gz}
+    prefix=${prefix%.nii}
+    prefix=${prefix%.nii.gz}
+    prefix=${prefix%.mhd}
+    prefix=${prefix%.raw}
+    prefix=${prefix%.raw.gz}
+    echo -n "${prefix}"
+}
+
+# ----------------------------------------------------------------------------
+# execute subprocess
+run()
+{
+    if [ ${verbose} -gt 0 ]; then
+        execute -v $(( verbose - 1 )) -- "$@"
+    else
+        execute -v $(( verbose - 1 )) -- "$@" > /dev/null # discard stdout of subprocess
+    fi
+}
+
+# ----------------------------------------------------------------------------
+# print error message
+#
+# @param [in] msg Error message to print to stderr.
+error() { echo "Error: $1" 1>&2; }
+
+# ----------------------------------------------------------------------------
+# clean up on exit
+trap cleanup EXIT
+cleanup()
+{
+    if [ -n ${tmpdir} ] && [ ${keepIntermediateResultsOrNot} -eq 0 ]; then
+        \rm -rf ${tmpdir}
+    fi	
+}
+
+############################################
+#
+### Parse command-line arguments
+#
+############################################
+
+verbose=0 # verbosity of output messages
+
+# ----------------------------------------------------------------------------
+# required arguments for input files
+inputImgA='NULL'
+inputImgB='NULL'
+
+# ----------------------------------------------------------------------------
+# optional argumenst for output files
+outputImgA2B='NULL'
+deformationFieldA2B='NULL'
+
+# ----------------------------------------------------------------------------
+# optional arguments for input initialization
+inputmask='NULL'
+initDeformation='NULL'
+
+# ----------------------------------------------------------------------------
+# optional parameters 
+affineOrNot=1                     # whether to perform affine registration, 0: no, 1: yes (default)
+distBetweenControlPointsX=0       # will be determined automatically if set to less or equal to 0
+distBetweenControlPointsY=0       # will be determined automatically if set to less or equal to 0
+distBetweenControlPointsZ=0       # will be determined automatically if set to less or equal to 0
+useMemory=2                       # level 0 (least memory usage, lowest registration accuracy) to 3 (most memory usage, highest registration accuracy).
+numGaborScales=3 
+numGaborOrientations=4 
+numDiscreteSamples=5 
+maxNumIterInEachResolution=10 
+label_factor=0.50  #0.67 
+manipulationMethod=1              # 0: NN, 1: trilinear, 2: cubic B-spline
+regularizationWeight=-1           # will be determined automatically if set to '-1'
+mutualSaliencyOrNot=0
+keepIntermediateResultsOrNot=0    # 0: remove them, 1: keep them
+foregroundThre=0 #12                 # after intensities have been normalized into [0,255] range
+fastApproximationOrNot=0
+additionOrComposition=0
+matchHistogramFlag=0
+similarityMeasure=0               # 0: SSD, 1: CC
+
+# ----------------------------------------------------------------------------
+# optional arguments for user-specific intermediate directory
+intermediateResultsDir=           # directory for intermediate results
+
+# ----------------------------------------------------------------------------
+# optional arguments for Jacobian calculation
+Jacobian='NULL'
+
+# ----------------------------------------------------------------------------
+# optional arguments for RAVENS calculation
+RAVENS='NULL'
+LabelMap='NULL'     # a user must input this when -R option is used to calculate RAENS
+labelValues=99999   # a user must input this when -R option is used to calculate RAENS
+
+# ----------------------------------------------------------------------------
+# optional arguments for warping
+WarpedImage='NULL'
+interpolationWarp=1 # interpolation when warping another image, 1: trilinear, 0: nearest neighbor
+
+# ----------------------------------------------------------------------------
+# parse user input 
+checkarg()
+{
+    if [[ "X$2" == 'X' ]]; then
+        echo "Option $1 requires an argument!" 1>&2
+        echo "See --help for usage information." 1>&2
+        exit 1
+    fi
+}
+
+setarg()
+{
+    if [[ ${#1} -gt 2 ]] && [[ "${1:0:1}" == '-' ]] ; then
+        echo -n "${1:2: -1}"
+    elif [[ "X$2" == 'X' ]]; then
+        echo "Option $1 requires an argument!" 1>&2
+        echo "See --help for usage information." 1>&2
+        exit 1
+    fi
+}
+
+while [[ $# -gt 0 ]]; do
+    opt="$1"
+    arg="$2"
+    nshift=2
+    # allow both "-a 1" and "-a1", therefore, split $1 in option flag and argument
+    if [[ ${#opt} -gt 2 ]] && [[ "${opt:0:1}" == '-' ]] && [[ "${opt:1:1}" != '-' ]] ; then
+        arg="${opt:2}"
+        opt="${opt:0:2}"
+        nshift=1 # $2 is the next option, so don't process it yet
+    fi
+    case "$opt" in
+        # -------------------------------------------
+        # required arguments
+        -S|--source) checkarg $opt $arg; inputImgA="$arg";;
+        -T|--target) checkarg $opt $arg; inputImgB="$arg";;
+        # -------------------------------------------
+        # optional arguments for output
+        -O|--outimg) checkarg $opt $arg; outputImgA2B="$arg";;
+        -D|--outdef) checkarg $opt $arg; deformationFieldA2B="$arg";;
+        # -------------------------------------------
+        # optional arguments for registration parameters
+        -a) checkarg $opt $arg; affineOrNot="$arg";;
+        -x) checkarg $opt $arg; distBetweenControlPointsY="$arg";;
+        -y) checkarg $opt $arg; distBetweenControlPointsX="$arg";;
+        -z) checkarg $opt $arg; distBetweenControlPointsZ="$arg";;
+		-u) checkarg $opt $arg; useMemory="$arg";;
+		-M) matchHistogramFlag=1; nshift=1;;
+        -s) checkarg $opt $arg; numGaborScales="$arg";;
+        -o) checkarg $opt $arg; numGaborOrientations="$arg";;
+        -n) checkarg $opt $arg; numDiscreteSamples="$arg";;
+        -k) checkarg $opt $arg; maxNumIterInEachResolution="$arg";;
+        -H) checkarg $opt $arg; label_factor="$arg";;
+        -m) checkarg $opt $arg; manipulationMethod="$arg";;
+        -g) checkarg $opt $arg; regularizationWeight="$arg";;
+        -c) checkarg $opt $arg; mutualSaliencyOrNot="$arg";;
+        -i) keepIntermediateResultsOrNot=1; nshift=1;;
+		-I) checkarg $opt $arg; intermediateResultsDir="$arg";;
+        -t) checkarg $opt $arg; foregroundThre="$arg";;
+        -f) fastApproximationOrNot=1; nshift=1;;
+        -e) checkarg $opt $arg; additionOrComposition="$arg";;
+        -w) checkarg $opt $arg; similarityMeasure="$arg";;
+		# -------------------------------------------
+        # optional arguments for input initialization
+        -b) checkarg $opt $arg; inputmask="$arg";;
+        -d) checkarg $opt $arg; initDeformation="$arg";;
+        # -------------------------------------------
+        # optional arguments for Jacobian calculation
+        -J) checkarg $opt $arg; Jacobian="$arg";;
+        # -------------------------------------------
+        # optional arguments for RAVENS calculation
+        -R) checkarg $opt $arg; RAVENS="$arg";;
+        -L) checkarg $opt $arg; LabelMap="$arg";;
+        -l) checkarg $opt $arg; labelValues="$arg";;
+        # -------------------------------------------
+        # optional arguments for Warping Image
+        -W) checkarg $opt $arg; WarpedImage="$arg";;
+        -r) checkarg $opt $arg; interpolationWarp="$arg";;
+        # -------------------------------------------
+        # optional arguments for software information
+        -v|--verbose) (( verbose++ )); nshift=1;;
+        -V|--version) print_version 'dramms' --copyright '2011, 2012 University of Pennsylvania'; exit 0;;
+        -h|--help) print_help_detail; exit 0;;
+        *)
+            echo "Invalid option $1!" 1>&2
+            echo "See --help for usage information." 1>&2
+            exit 1
+            ;;
+    esac
+    shift ${nshift}
+done
+
+# ----------------------------------------------------------------------------
+# automatically determine registration direction based on whether RAVENS maps
+# will be calculated the registration is always from subject to template except
+# in case of RAVENS calculation
+
+if [ ${inputImgA} == 'NULL' ]; then
+    echo
+    error "No subject image specified!"
+    echo
+    exit 1
+fi
+if [ ${inputImgB} == 'NULL' ]; then
+    echo
+    error "No template image specified!"
+    echo
+    exit 1
+fi
+
+if [ $RAVENS != 'NULL' ]; then
+    bridgeVal=${inputImgA}
+    inputImgA=${inputImgB}
+    inputImgB=${bridgeVal}
+fi
+
+inputImgA_basename=`basename ${inputImgA}`
+inputImgA_path=`realpath ${inputImgA}`
+inputImgA_path=`dirname ${inputImgA_path}`
+inputImgA_fullname=${inputImgA_path}/${inputImgA_basename}
+inputImgA_prefix=`prefix ${inputImgA_basename}`
+
+inputImgB_basename=`basename ${inputImgB}`
+inputImgB_path=`realpath ${inputImgB}`
+inputImgB_path=`dirname ${inputImgB_path}`
+inputImgB_fullname=${inputImgB_path}/${inputImgB_basename}
+inputImgB_prefix=`prefix ${inputImgB_basename}`
+
+############################################
+#
+### Create temporary directories
+#
+############################################
+
+[[ -n "${intermediateResultsDir}" ]] && intermediateResultsDir=`abspath "${intermediateResultsDir}"`
+
+# make temporary directory
+currentDIR=`pwd`
+if [ ${keepIntermediateResultsOrNot} -eq 1 ]; then
+    if [[ -n "${intermediateResultsDir}" ]]; then
+        tmpdir="${intermediateResultsDir}"
+        [[ -d "${tmpdir}" ]] || mkdir -p "${tmpdir}"
+    else
+        tmpdir=`mktemp -d "${currentDIR}/dramms-${inputImgA_prefix}_to_${inputImgB_prefix}-XXXXXX"`
+    fi
+elif [[ -n "${intermediateResultsDir}" ]]; then
+    tmpdir=`mktemp -d "${intermediateResultsDir}/dramms-XXXXXX"`
+elif [[ -n "${SBIA_TMPDIR}" ]]; then
+    tmpdir=`mktemp -d "${SBIA_TMPDIR}/dramms-XXXXXX"`
+elif [[ -n "${TMPDIR}" ]]; then
+    tmpdir=`mktemp -d "${TMPDIR}/dramms-XXXXXX"`
+else
+    tmpdir=`mktemp -d /tmp/dramms-XXXXXX`
+fi
+sysflag=`echo $?`
+if [ ${sysflag} -ne 0 ]; then
+    echo
+    error "Failed to make a temporary directory!"
+    echo
+    exit 1
+fi
+tmpdir=`abspath ${tmpdir}`
+
+# make subdirectories for different intermediate results
+attributeDIR=${tmpdir}/features
+run mkdir -p ${attributeDIR}
+sysflag=`echo $?`
+[ ${sysflag} -eq 0 ] || {
+    echo
+    error "Failed to create directory ${attributeDIR}!"
+    echo
+    exit 1
+}
+
+intermediateDIR=${tmpdir}/intermediate
+run mkdir -p ${intermediateDIR}
+sysflag=`echo $?`
+[ ${sysflag} -eq 0 ] || {
+    echo
+    error "Failed to create directory ${intermediateDIR}!"
+    echo
+    exit 1
+}
+
+############################################
+#
+### Check command-line arguments
+#
+############################################
+
+# ----------------------------------------------------------------------------
+# check 1: two input images should be in the same space if no affine registration is requested
+if [ $affineOrNot == "0" ]; then
+    execute --allow_fail -- CheckTwoImages ${inputImgA} ${inputImgB} > /dev/null
+	sysflag=`echo $?`
+    if [ ${sysflag} -eq 255 ]; then
+        echo
+        error "Failed to read header of image ${inputImgA} or ${inputImgB}!"
+        echo
+        exit 1
+    elif [ ${sysflag} -eq 0 ]; then
+        echo
+        error "The two input images have not been affinely registered, i.e., they are not in the same space yet."
+        error "Please affinely register the images or execute dramms again using the '-a 1' option so it does it for you."
+        echo
+        exit 1
+    fi
+	number_of_dimensions=${sysflag}
+    if [ ${verbose} -gt 0 ]; then
+        echo "The input images reside in a common ${number_of_dimensions}D space."
+    fi
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 3: if the name of output (registered) image and/or deformation are not given, use default names
+if [ ${outputImgA2B} == 'NULL' ]; then
+    outputImgA2B=${tmpdir}/A2B.nii.gz
+fi
+outputImgA2B_basename=`basename ${outputImgA2B}`;
+outputImgA2B_path=`realpath ${outputImgA2B}`
+outputImgA2B_path=`dirname ${outputImgA2B_path}`
+outputImgA2B_fullname=${outputImgA2B_path}/${outputImgA2B_basename};
+
+if [ ${deformationFieldA2B} == 'NULL' ]; then
+    deformationFieldA2B=${tmpdir}/def_A2B.nii.gz
+fi
+deformationFieldA2B_basename=`basename ${deformationFieldA2B}`;
+deformationFieldA2B_path=`realpath ${deformationFieldA2B}`
+deformationFieldA2B_path=`dirname ${deformationFieldA2B_path}`
+deformationFieldA2B_fullname=${deformationFieldA2B_path}/${deformationFieldA2B_basename}
+
+prefixA2B=`prefix ${outputImgA2B_basename}`
+
+if [ -z ${outputImgA2B_path} ] || [ -z ${deformationFieldA2B_path} ]; then
+    echo
+    error 'The given directories to store output image and/or output deformation to do not exist!'
+    echo
+    exit 1
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 4: if initial mask is given, need to make sure it exists, and in the same space of template image
+if [ $inputmask != 'NULL' ]; then  
+    execute --allow_fail -- CheckTwoImages ${inputImgB} ${inputmask} > /dev/null
+	sysflag=`echo $?`
+    if [ ${sysflag} -eq 255 ]; then
+        echo
+        error "Failed to read header of image ${inputImgB} or mask ${inputmask}!"
+        echo
+        exit 1
+    elif [ ${sysflag} -eq 0 ]; then
+        echo
+        error "Input mask must be defined in the space of image ${inputImgB}!"
+        echo
+    fi
+
+    inputmask_basename=`basename ${inputmask}`
+    inputmask_path=`realpath ${inputmask}`
+    inputmask_path=`dirname ${inputmask_path}`
+    inputmask_fullname=${inputmask_path}/${inputmask_basename}
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 5: if initial deformation is given, need to make sure 
+#          1) it is in the same space of template image; 
+#          2) it has N displacement components (moving in N-D space, where N is the dimension of the image)
+if [ $initDeformation != 'NULL' ]; then 
+	# check 5-1
+    execute --allow_fail -- CheckTwoImages ${inputImgB} ${initDeformation} > /dev/null
+	sysflag=`echo $?`
+    if [ ${sysflag} -eq 255 ]; then
+        echo
+        error "Failed to read header of image ${inputImgB} or initial deformation ${initDeformation}!"
+        echo
+        exit 1
+    elif [ ${sysflag} -eq 0 ]; then
+        echo
+        error "Input initial deformation should be defined in the space of image ${inputImgB}!"
+        echo
+    fi
+
+	# check 5-2
+	NDim=${sysflag}
+	NDispComponents=`execute --allow_fail -- TransformOperation ${initDeformation} |sed -n 1p |cut -d' ' -f6`
+	if [ ${NDispComponents} != ${NDim} ]; then
+		echo 
+		error "Please double check the initial deformation field (${initDeformation})! The displacement vector at each voxel should have ${NDim} components (moving in ${NDim}-D space). Right now there are ${NDispComponents} component(s) (according to variable 'dim5' in the header), which is incorrect."
+		echo
+		exit 1
+	fi
+	
+    initDeformation_basename=`basename ${initDeformation}`
+    initDeformation_path=`realpath ${initDeformation}`
+    initDeformation_path=`dirname ${initDeformation_path}`
+    initDeformation_fullname=${initDeformation_path}/${initDeformation_basename}
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 6: check required input if RAVENS calculation is requested
+if [ $RAVENS != 'NULL' ]; then
+    RAVENS_basename=`basename ${RAVENS}`
+    RAVENS_path=`realpath ${RAVENS}`
+    RAVENS_path=`dirname ${RAVENS_path}`
+    RAVENS_prefix=`basename ${RAVENS_basename}`
+
+    if [ ! -d ${RAVENS_path} ] || [ -z ${RAVENS_path} ]; then
+        echo
+        error 'The given directory to store RAVENS maps to does not exist.'
+        echo
+        exit 1
+    fi
+
+    # check 6a. RAVENS calculate requires input of label map.
+    if [ $LabelMap == 'NULL' ]; then
+        echo
+        error "Calculation of RAVENS requires input of label map (-L option) in subject space! And the label map must be in byte datatype."
+        echo
+        exit 1
+    else
+        # check 6b. label map should be in the subject space
+        execute --allow_fail -- CheckTwoImages ${LabelMap} ${inputImgB} > /dev/null
+		sysflag=`echo $?`
+        if [ ${sysflag} -eq 255 ]; then
+            echo
+            error "Failed to read header of label map ${LabelMap} or image ${inputImgB}!"
+            echo
+            exit 1
+        elif [ ${sysflag} -eq 0 ]; then
+            echo
+            error "Label map ($LabelMap) should be in the same space with subject image ($inputImgB)!"
+            echo
+            exit 1
+        fi
+
+        # check 6c. label values in label map should be given
+        if [ ${labelValues} == "99999" ]; then
+            echo 
+            error "Please specify the label values in the label map for calculating RAVENS map (ie, which labeled tissue/structure in the label map you would like to calculate RAVENS for, eg, -l 50,150,250)."
+            echo
+            exit 1
+        fi
+
+        # till now we are assured that the label map has been input corrected (exist, in byte datatype and in subject space), we can go ahead to calculate RAVENS maps
+        LabelMap_basename=`basename ${LabelMap}`
+        LabelMap_path=`realpath ${LabelMap}`
+        LabelMap_path=`dirname ${LabelMap_path}`
+        LabelMap_fullname=${LabelMap_path}/${LabelMap_basename}
+
+        if [ ${verbose} -gt 0 ]; then
+            echo "Input subject image = ${inputImgB_basename}"
+            echo "Input label map = ${LabelMap_basename}"
+            echo
+            echo "All the inputs for RAVENS calculation are fine."
+            echo "Calculated RAVENS maps will be in the template space (same as in ${inputImgA_basename}), and will be saved as SHORT datatype."
+            echo
+        fi
+    fi 
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 7: check if the given directory for jacobian exists if user wants to calculate jacobian.
+if [ ${Jacobian} != 'NULL' ]; then
+    Jacobian_basename=`basename ${Jacobian}`
+    Jacobian_path=`realpath ${Jacobian}`
+    Jacobian_path=`dirname ${Jacobian_path}`
+    Jacobian_fullname=${Jacobian_path}/${Jacobian_basename}
+
+    if [ ! -d ${Jacobian_path} ] || [ -z "${Jacobian_path}" ]; then
+        echo
+        error 'The given directory to store jacobian determinant maps to does not exist!'
+        echo
+        exit 1
+    fi
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 8: check necessary input if warping image using obtained deformation is requested
+if [ ${WarpedImage} != 'NULL' ]; then
+    if [ ${RAVENS} != 'NULL' ]; then
+        error "Cannot calculate RAVENS maps and warp images at the same time as this requires registration in reverse directions:"
+        error "calculating RAVENS maps requires registration from template to subject, while warping image indicates the other way around."
+        error "We can only do one of these tasks at a time."
+        echo
+        exit 1
+    fi
+
+    WarpedImage_basename=`basename ${WarpedImage}`
+    WarpedImage_path=`realpath ${WarpedImage}`
+    WarpedImage_path=`dirname ${WarpedImage_path}`
+    WarpedImage_fullname=${WarpedImage_path}/${WarpedImage_basename}
+
+    if [ ! -d ${WarpedImage_path} ] || [ -z ${WarpedImage_path} ]; then
+        echo
+        error "The given directory to store the warped image to (${WarpedImage_path}) does not exist."
+        echo
+        exit 1
+    fi
+
+    # check input image to be warped.
+    if [ $LabelMap == 'NULL' ]; then
+        echo
+        error "Warping an additional image requires specification of image to warp (-L option)!"
+        echo
+        exit 1
+    else
+        LabelMap_basename=`basename ${LabelMap}`
+        LabelMap_path=`realpath ${LabelMap}`
+        LabelMap_path=`dirname ${LabelMap_path}`
+        LabelMap_fullname=${LabelMap_path}/${LabelMap_basename}
+
+        # check if the label map is in the subject space
+        execute --allow_fail -- CheckTwoImages ${LabelMap} ${inputImgA} > /dev/null
+		sysflag=`echo $?`
+        if [ ${sysflag} -eq 255 ]; then
+            echo
+            error "Failed to read header of label map ${LabelMap} or image ${inputImgA}!"
+            echo
+            exit 1
+        elif [ ${sysflag} -eq 0 ]; then
+            echo
+            error "Label map ($LabelMap) must be in the same space with subject image ($inputImgA)!"
+            echo
+            exit 1
+        fi
+
+        # check interpolation method when warping image
+        if [ ${interpolationWarp} != "1" ] && [ ${interpolationWarp} != "0" ]; then
+            error "Interpolation method must be either nearest neighbor (0) or trilinear (1) for warping the image!"
+            echo
+            exit 1
+        fi
+
+        # till now we are assured that the input image to be warped has been input correctly (exist in subject space),
+        # we can go ahead to calculate WarpedImage after having obtained the deformation
+        if [ ${verbose} -gt 0 ]; then
+            echo "Input image to warp = ${WarpedImage_basename}"
+            echo "Input image to be warped = ${LabelMap_basename}"
+            echo
+            echo "Input for warping image is fine."
+            echo "The warped image will be in template space (same as in ${inputImgB_basename})."
+            echo
+        fi
+    fi
+fi
+    
+
+# ----------------------------------------------------------------------------
+# check 9: if affine registration is requested ("-a 1" option), check if flirt exists
+if [ ${affineOrNot} != "0" ]; then
+    exepath FLIRTCMD flirt
+    if [ -z ${FLIRTCMD} ]; then
+      error "Could not find FSL's FLIRT command in your PATH!"
+      error "If dramms is called with affine registration at the beginning ('-a 1' option), it needs FLIRT tool from FSL package."
+      error "Please install FSL and make sure that the directory to the flirt executable is listed in your PATH"
+      error "environment variable. For a proper installation of FSL, please refer to the FSL documentation such as the one"
+      error "at http://www.fmrib.ox.ac.uk/fsl/fsl/linux.html with installation instructions on Unix."
+    fi
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 10: if user didn't specify regularization, determine default based on other user inputs
+if [ ${regularizationWeight} == '-1' ]; then  
+    #  I. Ordinary version: medium-level aggressive deformation
+    regularizationWeight=0.2
+    # II. RAVENS version:   use a smoother deformation for calculating RAVENS
+    if [ $RAVENS != 'NULL' ]; then
+        regularizationWeight=0.3
+    fi
+    # III. ROI version: use more aggressive deformation for ROI warping
+    if [ $WarpedImage != 'NULL' ] && [ $interpolationWarp == "0" ]; then
+        regularizationWeight=0.15
+    fi
+fi
+# automatically mapping regularization weighting and label_factor to allow deformations ranging from aggressive to smooth when user input weights varies between [0,1]
+if [ ${verbose} -gt 0 ]; then
+    echo "Automatically mapping regularization weights and label factor to roughly the range [0,1]"
+fi
+regularizationWeightMapped=`echo "(0.15*e(3.0*l($regularizationWeight/0.15)))" | bc -l`
+if [ ${verbose} -gt 0 ]; then
+    echo "Regularization = $regularizationWeightMapped"
+    echo "Label factor = $label_factor"
+    echo
+fi
+
+
+# ----------------------------------------------------------------------------
+# check 11: number of Gabor scales
+if [ $numGaborScales -lt 3 ] || [ $numGaborScales -gt 4 ]; then
+   error 'The current version only supports the number of Gabor scales to be 3 or 4!'
+   error 'Please choose a supported number of Gabor scales.'
+   echo 
+   exit 1
+fi
+if [ ${verbose} -gt 0 ]; then
+   echo "Number of Gabor scales = $numGaborScales"
+   echo
+fi
+
+############################################
+#
+### Summary
+#
+############################################
+
+echo -------------------------------------------------------------------------------------------
+echo "DRAMMS: Deformable image Registration via Attribute Matching and Mutual-Saliency weighting"
+echo -------------------------------------------------------------------------------------------
+echo
+if [ ${verbose} -gt 0 ]; then
+    echo
+    echo ----------------------------------------
+    echo "Registering from"
+    echo "  ${inputImgA_basename} (in directory ${inputImgA_path})"
+    echo "to"
+    echo "  ${inputImgB_basename} (in directory ${inputImgB_path}),"
+    echo ''
+    echo "Registered image will be"
+    echo "  ${outputImgA2B_basename} (in directory ${outputImgA2B_path})"
+    echo "and deformation will be "
+    echo "  ${deformationFieldA2B_basename} (in directory ${deformationFieldA2B_path})."
+    echo ''
+    echo "Both registered image and deformation field will be in the same space as ${inputImgB_basename}."
+    if [ $RAVENS != 'NULL' ]; then
+    echo "RAVENS maps will be in the sampe space as ${inputImgA_basename}."
+    fi
+    echo ----------------------------------------
+    echo
+    # echo "Distance between control points = (${distBetweenControlPointsX},${distBetweenControlPointsY},${distBetweenControlPointsZ})"
+    echo "Gabor attributes will be computed at $numGaborScales scales and in $numGaborOrientations orientations"
+    echo "During discrete optimization, number of samples: ${numDiscreteSamples}"
+    echo "Manipulation method of control points:           ${manipulationMethod}"
+    echo "Regularization weight:                           ${regularizationWeight}"
+    echo "Input mask:                                      ${inputmask}"
+    echo "Temporary working directory:                     ${tmpdir}"
+	echo "Temporary attribute directory:                   ${attributeDIR}"
+	echo "Intermediate results directory:                  ${intermediateDIR}"
+    echo
+fi
+
+
+##############################
+#
+### Registration
+#
+# Step 1:  (preprocessing for attribute extraction) smooth and convert to byte
+# Step 2:  (preprocessing for attribute extraction) match histogram if necessary 
+# Step 3:  (optional) affine registration
+# Step 4a: (optional) remove affine component from initial deformation
+# Step 4b: (optional) ensure that initial deformation is diffeomorphic
+# Step 5a: generate multi-resolution images
+# Step 5b: extract Gabor attribute images
+# Step 6:  non-rigid registration
+# Step 7:  combine affine and deformable transformations
+# Step 8:  warp template image
+#
+##############################
+
+# ----------------------------------------------------------------------------
+# change working directory
+cd ${intermediateDIR}
+sysflag=`echo $?`
+[ ${sysflag} -eq 0 ] || {
+    echo
+    error "Failed to change to directory ${intermediateDIR}!"
+    echo
+    exit 1
+}
+[ ${verbose} -gt 0 ] && {
+    echo
+    echo "Changed to directory ${intermediateDIR}"
+    echo
+}
+
+
+# ----------------------------------------------------------------------------
+echo "Step 1:   Convert images to byte datatype..."
+run ConvertImage -s -e --reset-scaling -t uchar -m 0 -M 255 ${inputImgA_fullname} A_byte.nii.gz
+run ConvertImage -s -S --reset-scaling -t uchar -m 0 -M 255 ${inputImgA_fullname} A_byte_nothresholding.nii.gz
+run ConvertImage -s -e --reset-scaling -t uchar -m 0 -M 255 ${inputImgB_fullname} B_byte.nii.gz
+run ConvertImage -s -S --reset-scaling -t uchar -m 0 -M 255 ${inputImgB_fullname} B_byte_nothresholding.nii.gz
+
+
+# ----------------------------------------------------------------------------
+echo "Step 2:   Match histograms if necessary..."
+#          This program is more "intellegent" than simply matching histogram of image A to image B
+#          It checks histograms of both images, automatically determines 1) whether to match their histograms
+#          and 2) if necessary, match histogram of which image to which image.
+run cp A_byte.nii.gz A_byte0.nii.gz
+run cp B_byte.nii.gz B_byte0.nii.gz
+if [ ${matchHistogramFlag} -eq 1 ]; then
+	run MatchHistograms A_byte.nii.gz B_byte.nii.gz -M
+else
+	run MatchHistograms A_byte.nii.gz B_byte.nii.gz
+fi
+
+	# to determine whether to keep the byte images before or after histogram matching
+	if [ ${matchHistogramFlag} -eq 0 ]; then
+		# cc*mi before histogram matching
+		cc=`execute CalculateImageSimilarity -C A_byte0.nii.gz B_byte0.nii.gz`
+		sysflag=`echo $?`
+        [ ${sysflag} -eq 0 ] || { error "Failed to compute cross-correlation of A_byte0.nii.gz and B_byte0.nii.gz!"; exit 1; }
+        mi=`execute CalculateImageSimilarity -M A_byte0.nii.gz B_byte0.nii.gz`
+		sysflag=`echo $?`
+        [ ${sysflag} -eq 0 ] || { error "Failed to compute unnormalized mutual information of A_byte0.nii.gz and B_byte0.nii.gz!"; exit 1; }
+
+        cc=`echo -e "${cc}" | grep CC              | cut -d'=' -f2`
+        cc=`echo ${cc} | awk '{ print ($1 >= 0) ? $1 : 0 - $1}'` # we shall only care about the absolute value of cc
+        mi=`echo -e "${mi}" | grep MI_unnormalized | cut -d'=' -f2`
+
+        mi_cc0=`echo "${cc}*${mi}" | bc -l`
+		sysflag=`echo $?`
+        if [ ${sysflag} -ne 0 ]; then
+            error "Failed to compute product of cross-correlation and mutual information!" 1>&2
+            exit 1
+        fi
+
+		# cc*mi after histogram matching
+		cc=`execute CalculateImageSimilarity -C A_byte.nii.gz B_byte.nii.gz`
+		sysflag=`echo $?`
+        [ ${sysflag} -eq 0 ] || { error "Failed to compute cross-correlation of A_byte.nii.gz and B_byte.nii.gz!"; exit 1; }
+        mi=`execute CalculateImageSimilarity -M A_byte.nii.gz B_byte.nii.gz`
+		sysflag=`echo $?`
+        [ ${sysflag} -eq 0 ] || { error "Failed to compute unnormalized mutual information of A_byte.nii.gz and B_byte.nii.gz!"; exit 1; }
+
+        cc=`echo -e "${cc}" | grep CC              | cut -d'=' -f2`
+        cc=`echo ${cc} | awk '{ print ($1 >= 0) ? $1 : 0 - $1}'` # we shall only care about the absolute value of cc
+        mi=`echo -e "${mi}" | grep MI_unnormalized | cut -d'=' -f2`
+
+        mi_cc=`echo "${cc}*${mi}" | bc -l`
+		sysflag=`echo $?`
+        if [ ${sysflag} -ne 0 ]; then
+            error "Failed to compute product of cross-correlation and mutual information!" 1>&2
+            exit 1
+        fi
+		
+		# compare and make decision
+		before_vs_after=`echo ${mi_cc0} '>' ${mi_cc} | bc -l`
+		sysflag=`echo $?`
+        if [ ${sysflag} -ne 0 ]; then
+            error "Comparison of image similarity before and after histogram matching failed!" 1>&2;
+            exit 1;
+		else
+			if [ ${verbose} -gt 0 ]; then
+				echo "Compare image similarity before and after histogram matching."
+				echo "before: cc*mi = ${mi_cc0}"
+				echo "after : cc*mi = ${mi_cc}"
+			fi
+        fi
+
+        if [ "${before_vs_after}" -eq 1 ]; then
+			if [ ${verbose} -gt 0 ]; then
+				echo "We decided to keep byte images before histogram matching, as histomatch reduced image similarity."
+				echo ""
+			fi
+            run mv A_byte0.nii.gz A_byte.nii.gz
+            run mv B_byte0.nii.gz B_byte.nii.gz
+		else
+			if [ ${verbose} -gt 0 ]; then
+				echo "We decided to keep byte images after histogram matching, as histomatch increased image similarity."
+				echo ""
+			fi
+			run rm A_byte0.nii.gz
+			run rm B_byte0.nii.gz
+        fi
+	fi
+	
+	
+# ----------------------------------------------------------------------------
+# get dimensionality of input image
+image_info=`execute --allow_fail -- CheckTwoImages ${inputImgA_fullname} ${inputImgB_fullname}`
+sysflag=`echo $?`
+if [ ${sysflag} -eq 255 ]; then
+    echo
+    error "Failed to read header of image ${inputImgA} or ${inputImgB}!"
+    echo
+    exit 1
+fi
+if [ ${sysflag} -eq 0 ]; then
+	inputImageShareImageVoxelSize=0;
+	image_info=`execute --allow_fail -- CheckTwoImages ${inputImgB_fullname} ${inputImgB_fullname}`
+	sysflag=`echo $?`
+else
+	inputImageShareImageVoxelSize=1; 
+fi
+# get dimension and image size of the target image.
+number_of_dimensions=${sysflag}
+image_size=`echo ${image_info} | grep 'Image size' | sed 's/Image size: (//;s/)//'`
+xSize=`echo ${image_size} | cut -d, -f 1| tr -d ' '`
+ySize=`echo ${image_size} | cut -d, -f 2| tr -d ' '`
+zSize=`echo ${image_size} | cut -d, -f 3 |cut -d' ' -f2| tr -d ' '`
+
+# check if ${xSize}, ${ySize} and ${zSize} are purely numerical, othrewise quit and report error
+xSize_numerical=`echo ${xSize} | grep "^-\?[0-9]*$"`
+ySize_numerical=`echo ${ySize} | grep "^-\?[0-9]*$"`
+zSize_numerical=`echo ${zSize} | grep "^-\?[0-9]*$"`
+if [ "${xSize}" != "${xSize_numerical}" ] || [ "${ySize}" != "${ySize_numerical}" ] || [ "${zSize}" != "${zSize_numerical}" ]; then
+	echo
+	error "The image size (${xSize}, ${ySize}, ${zSize}) is non-numerical. Program quits here. Please double check input image headers."
+	exit 1
+fi
+xzratio=`echo "${xSize}/${zSize}" | bc -l`
+yzratio=`echo "${ySize}/${zSize}" | bc -l`
+		
+		
+# ----------------------------------------------------------------------------
+chosencc=1 # initialize cc (correlation coefficient between two images)
+if  [ ${affineOrNot} -eq 0 ]; then # user chooses not to run affine, assuming the input images have already been affinely aligned.
+	if [ ${inputImageShareImageVoxelSize} -eq 1 ]; then
+		echo "Step 3:   Skip affine registration per the user's request (because -a option is set 0). The two input images are assumed to be already affinely aligned."
+		ImgA2BAffine=A_byte.nii.gz
+	else
+		echo "Step 3:  Skip affine registration per the user's request (because -a option is set 0)."
+		error "However, two input images do not share image and/or voxel size. Please double check if they are indeed affinely-aligned, or use '-a 1' to turn on affine registration."
+		echo
+	exit 1
+	fi
+else 
+    echo "Step 3:   Affine register images (may take several minutes)..."
+    [ ${verbose} -gt 0 ] && echo
+
+    ImgA2BAffine=A2B_affine.nii.gz
+    MatA2BAffine=A2B_affine.mat
+
+	# calculate the affine transformation matrix from preprocessed byte images.
+	simset="normmi corratio"
+    [ ${verbose} -gt 0 ] && echo "Try using normmi as similarity metric for affine registration"
+    run ${FLIRTCMD} -in A_byte.nii.gz -ref B_byte.nii.gz -out ${intermediateDIR}/A2B_affine_normmi.nii.gz -omat ${intermediateDIR}/A2B_affine_normmi.mat -cost normmi -searchcost normmi -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -dof 12 -datatype char &
+    [ ${verbose} -gt 0 ] && echo "Try using corratio as similarity metric for affine registration"
+    run ${FLIRTCMD} -in A_byte.nii.gz -ref B_byte.nii.gz -out ${intermediateDIR}/A2B_affine_corratio.nii.gz -omat ${intermediateDIR}/A2B_affine_corratio.mat -cost corratio -searchcost corratio -searchrx -180 180 -searchry -180 180 -searchrz -180 180 -dof 12 -datatype char &
+	
+	if [ `echo ${xzratio} '>=' 5 | bc -l` -eq 1 ]&&[ `echo ${yzratio} '>=' 5 | bc -l` -eq 1 ]; then
+		simset="normmi corratio normmi_2D_nosearch corratio_2D_nosearch"
+		[ ${verbose} -gt 0 ] && echo "Try using normmi as similarity metric, -nosearch -2D, for affine registration"
+		run ${FLIRTCMD} -in A_byte.nii.gz -ref B_byte.nii.gz -out ${intermediateDIR}/A2B_affine_normmi_2D_nosearch.nii.gz -omat ${intermediateDIR}/A2B_affine_normmi_2D_nosearch.mat -cost normmi -searchcost normmi -2D -nosearch -datatype char &
+		[ ${verbose} -gt 0 ] && echo "Try using corratio as similarity metric, -nosearch -2D, for affine registration"
+		run ${FLIRTCMD} -in A_byte.nii.gz -ref B_byte.nii.gz -out ${intermediateDIR}/A2B_affine_corratio_2D_nosearch.nii.gz -omat ${intermediateDIR}/A2B_affine_corratio_2D_nosearch.mat -cost corratio -searchcost corratio -2D -nosearch -datatype char &
+	fi
+    # wait for background jobs to finish
+    wait
+    # when all above 4 affine tries have finished, pick the best one with highest mi * abs(cc)
+    [ ${verbose} -gt 0 ] && echo "Selecting best affine registration results"
+    max_mi_cc=0
+    for sim in ${simset}; do
+        cc=`execute CalculateImageSimilarity -C ${intermediateDIR}/A2B_affine_${sim}.nii.gz B_byte.nii.gz`
+		sysflag=`echo $?`
+        [ ${sysflag} -eq 0 ] || { error "Failed to compute cross-correlation of A2B_affine_${sim}.nii.gz and B_byte.nii.gz!"; exit 1; }
+        mi=`execute CalculateImageSimilarity -M ${intermediateDIR}/A2B_affine_${sim}.nii.gz B_byte.nii.gz`
+		sysflag=`echo $?`
+        [ ${sysflag} -eq 0 ] || { error "Failed to compute unnormalized mutual information of A2B_affine_${sim}.nii.gz and B_byte.nii.gz!"; exit 1; }
+
+        cc=`echo -e "${cc}" | grep CC              | cut -d'=' -f2`
+        cc=`echo ${cc} | awk '{ print ($1 >= 0) ? $1 : 0 - $1}'` # we shall only care about the absolute value of cc
+        mi=`echo -e "${mi}" | grep MI_unnormalized | cut -d'=' -f2`
+
+        mi_cc=`echo "${cc}*${mi}" | bc -l`
+		sysflag=`echo $?`
+        if [ ${sysflag} -ne 0 ]; then
+            error "Failed to compute product of cross-correlation and mutual information!" 1>&2
+            exit 1
+        fi
+
+        if [ ${verbose} -gt 0 ]; then
+            echo
+            echo "when sim=${sim}: mi=${mi}, cc=${cc}, mi*cc=${mi_cc}"
+        fi
+        mi_cc_vs_max_mi_cc=`echo ${mi_cc} '>' ${max_mi_cc} | bc -l`
+		sysflag=`echo $?`
+        if [ ${sysflag} -ne 0 ]; then
+            error "Comparison of image similarity to currently maximum similarity failed!" 1>&2;
+            exit 1;
+        fi
+
+        if [ "${mi_cc_vs_max_mi_cc}" -eq 1 ]; then
+            run cp ${intermediateDIR}/A2B_affine_${sim}.nii.gz ${ImgA2BAffine}
+            run cp ${intermediateDIR}/A2B_affine_${sim}.mat    ${MatA2BAffine}
+            max_mi_cc=${mi_cc}
+			chosencc=${cc}
+        fi
+    done
+    # check if affine registration finishes successfully
+	sysflag=`echo $?`
+    if [ ${sysflag} -ne 0 ] || [ ! -f ${ImgA2BAffine} ] || [ ! -f ${MatA2BAffine} ]; then
+        echo
+        error "Affine registration failed! No affine matrix was saved."
+        echo
+        exit 1
+    else
+        if [ ${verbose} -gt 0 ]; then
+            echo
+            echo "          Affine registration finished successfully."
+            echo
+            echo "          The computed affine transformation is:"
+            cat ${MatA2BAffine} | sed 's/^/          /'
+            echo
+            echo
+        fi
+    fi
+fi
+
+
+if [ ${verbose} -gt 1 ]; then
+    echo
+    echo "Number of dimensions = ${number_of_dimensions}"
+    echo "Image size = (${xSize}, ${ySize}, ${zSize})"
+    echo "Affine registered image = ${intermediateDIR}/${ImgA2BAffine}"
+    echo
+fi
+
+# ----------------------------------------------------------------------------
+# smooth initial deformation field and remove affine component
+if [ ${initDeformation} != 'NULL' ]; then
+    if [ ${affineOrNot} != 0 ]; then 
+        echo "Step 4a:  Remove affine component from initial deformation..."
+        initDeformation_DeformableOnly=initdef.nii.gz
+        # first, remove the affine component in the input initial deformation, leaving only the deformable part for initilization
+		run CombineTransforms -s -f A_byte.nii.gz -t B_byte.nii.gz ${initDeformation_fullname} ${MatA2BAffine} ${initDeformation_DeformableOnly}
+    else
+        echo "Step 4a:  Skip removal of affine component from initial deformation field as affine registration was skipped."
+        initDeformation_DeformableOnly=${initDeformation_fullname}
+    fi
+
+    # then, smooth the initial deformable part if it has negative jacobian determinants
+    echo "Step 4b:  Make initial deformation diffeomorphic if necessary..."
+    for i in 1 2; do # smooth two times at most
+        msg=`execute CalculateJacobianMap ${initDeformation_DeformableOnly} jacobian.nii.gz`
+		sysflag=`echo $?`
+		[ ${sysflag} -eq 0 ] || { error "Failed to calculate minimum Jacobian of ${initDeformation_DeformableOnly}!"; exit 1; }
+        minJac=`echo ${msg} | cut -d "=" -f5 |cut -d' ' -f1`
+		if [ ${verbose} -gt 0 ]; then echo minJac=$minJac; fi
+		run rm -f jacobian.nii.gz
+        if [ `echo ${minJac} | cut -c1` == '-' ]; then  # negative jacobian exists
+            if [ ${verbose} -gt 0 ]; then
+                echo "Initial deformation is not diffeomorphic: min Jacobian = ${minJac}"
+                echo "Smoothing, round $i..."
+            fi
+			# determine smoothing kernels adaptive to image size
+			imageSizeX=`echo ${msg} |cut -d'(' -f2 |cut -d')' -f1 |cut -d',' -f1`
+			imageSizeY=`echo ${msg} |cut -d'(' -f2 |cut -d')' -f1 |cut -d',' -f2`
+			imageSizeZ=`echo ${msg} |cut -d'(' -f2 |cut -d')' -f1 |cut -d',' -f3`
+			if [ ${imageSizeX} -gt ${imageSizeY} ]; then
+				smoothingSizeXY=$(( (${imageSizeX}+25)/50 ))
+			else
+				smoothingSizeXY=$(( (${imageSizeY}+25)/50 ))
+			fi
+			if [ ${smoothingSizeXY} -lt 3 ]; then
+				smoothingSizeXY=3
+			fi
+			if [ $(( ${smoothingSizeXY}%2 )) -eq 0 ]; then
+				smoothingSizeXY=$(( ${smoothingSizeXY}+1 ))
+			fi
+			smoothingHalfSizeXY=$(( (${smoothingSizeXY}-1)/2 ))
+            smoothingSizeZ=$(( (${imageSizeZ}+30)/60 ))
+			if [ ${smoothingSizeZ} -lt 1 ]; then
+				smoothingSizeZ=1
+			fi
+			if [ $(( ${smoothingSizeZ}%2 )) -eq 0 ]; then
+				smoothingSizeZ=$(( ${smoothingSizeZ}+1 ))
+			fi
+			smoothingHalfSizeZ=$(( (${smoothingSizeZ}-1)/2 ))
+            if [ `echo ${minJac} | cut -c2` == '0' ]; then
+                smoothingKernelXY=`echo "scale=2; ${smoothingSizeXY}*0.5" | bc`
+            else
+                smoothingKernelXY=`echo "scale=2; ${smoothingSizeXY}*0.5*${minJac}" | bc`
+            fi
+            if [ `echo ${minJac} | cut -c2` == '0' ]; then
+                smoothingKernelZ=`echo "scale=2; ${smoothingSizeZ}*0.5" | bc`
+            else
+                smoothingKernelZ=`echo "scale=2; ${smoothingSizeZ}*0.5*${minJac}" | bc`
+            fi
+			# smooth deformation (twice)
+            run ImageOperation \
+                    -s ${smoothingHalfSizeXY},${smoothingHalfSizeZ},${smoothingKernelXY},${smoothingKernelZ} \
+                    -s ${smoothingHalfSizeXY},${smoothingHalfSizeZ},${smoothingKernelXY},${smoothingKernelZ} \
+                    ${initDeformation_DeformableOnly} initdef_smooth.nii.gz
+            run mv -f initdef_smooth.nii.gz initdef.nii.gz
+            initDeformation_DeformableOnly=initdef.nii.gz
+        else 
+            break
+        fi
+    done
+    # after this, we are going to use ${initDeformation_DeformableOnly} to
+    # initialize the deformation in the following Deform3D program
+else
+    echo "Step 4:   Skip preprocessing of initial deformation as none was specified."
+fi
+
+
+
+# ----------------------------------------------------------------------------
+# change working directory
+cd ${attributeDIR}
+sysflag=`echo $?`
+[ ${sysflag} -eq 0 ] || {
+    echo
+    error "Failed to change to directory ${attributeDIR}!"
+    echo
+    exit 1
+}
+[ ${verbose} -gt 0 ] && {
+    echo
+    echo "Changed to directory ${attributeDIR}"
+    echo
+}
+
+
+# ----------------------------------------------------------------------------
+echo "Step 5a:  Generate multi-resolution images for extraction of Gabor attributes..."
+
+if [ ${xSize} -gt 4 ]&&[ ${ySize} -gt 4 ]&&[ ${zSize} -gt 4 ]; then
+	numLevels=3;
+elif [ ${xSize} -gt 4 ]&&[ ${ySize} -gt 4 ]&&[ ${zSize} -eq 1 ]; then
+	numLevels=3;
+else 
+	numLevels=2;
+fi
+# image in level 1 (highest resolution)
+mv -f ${intermediateDIR}/${ImgA2BAffine} A2B_affine_level1.nii.gz
+mv -f ${intermediateDIR}/B_byte.nii.gz   B_level1.nii.gz
+# images in level 2 (mid-resolution)
+run ImageOperation -s auto -r 2 A2B_affine_level1.nii.gz A2B_affine_level2.nii.gz
+run ImageOperation -s auto -r 2 B_level1.nii.gz          B_level2.nii.gz
+# images in level 3 (low resolution)
+if [ ${numLevels} -eq 3 ]; then
+	run ImageOperation -s auto -r 4 A2B_affine_level1.nii.gz A2B_affine_level3.nii.gz
+	run ImageOperation -s auto -r 4 B_level1.nii.gz          B_level3.nii.gz
+fi
+
+
+# ----------------------------------------------------------------------------
+# extract Gabor features - 2D case
+echo "Step 5b:  Extract Gabor attributes for deformable registration..."
+if [ ${number_of_dimensions} == "2" ]; then
+
+    # parameters
+    if [ $numGaborScales -eq 4 ]; then
+        ul_level1=0.05
+        uh_level1=0.8
+        ul_level2=0.075
+        uh_level2=1.2
+        ul_level3=0.08
+        uh_level3=1.28
+        ul_level4=0.1
+        uh_level4=1.6
+    fi
+    if [ $numGaborScales -eq 3 ]; then
+        ul_level1=0.05
+        uh_level1=0.4
+        ul_level2=0.075
+        uh_level2=0.6
+        ul_level3=0.1
+        uh_level3=0.8
+    fi
+
+    # in level 1
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level1,$uh_level1 -i$foregroundThre A2B_affine_level1.nii.gz A2B_affine_level1 &
+    run CalculateGaborTextures -s1 -o1 -u$ul_level1,$uh_level1 -i12 -M ${intermediateDIR}/B_byte_nothresholding.nii.gz B_level1 # to get a mask B_level1_mask.nii.gz
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level1,$uh_level1 -i$foregroundThre B_level1.nii.gz B_level1 &
+    # in level 2
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level2,$uh_level2 -i$foregroundThre A2B_affine_level2.nii.gz A2B_affine_level2 &
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level2,$uh_level2 -i$foregroundThre B_level2.nii.gz B_level2 &
+    # in level 3
+	if [ ${numLevels} -eq 3 ]; then
+		run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level3,$uh_level3 -i$foregroundThre A2B_affine_level3.nii.gz A2B_affine_level3 &
+		run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level3,$uh_level3 -i$foregroundThre B_level3.nii.gz B_level3 &
+	fi
+	
+    wait
+
+    # generate list files
+    i=1
+    while [ $i -le ${numLevels} ]; do
+        run GenerateGaborListFile -s$numGaborScales -o$numGaborOrientations -H A2B_affine_level$i Gabor_A_level$i.lst
+        run GenerateGaborListFile -s$numGaborScales -o$numGaborOrientations -H B_level$i Gabor_B_level$i.lst
+        i=$(( $i + 1 ))
+    done
+
+# ----------------------------------------------------------------------------
+# extract Gabor features - 3D case
+else
+
+    # parameters
+    if [ $numGaborScales -eq 4 ]; then
+        ul_level1=0.05
+        uh_level1=0.8
+        ul_level2=0.075
+        uh_level2=1.2
+        ul_level3=0.08
+        uh_level3=1.28
+        ul_level4=0.1
+        uh_level4=1.6
+    fi
+    if [ $numGaborScales -eq 3 ] && [ $xSize -gt 160 ] && [ $ySize -gt 160 ]; then
+        ul_level1=0.1 
+        uh_level1=1.6
+        if [ $xSize -lt $ySize ]&&[ $xSize -lt 256 ]; then
+            uh_level1=`echo "scale=2; 1.6-(1.0-$xSize/256.0)*1.4" | bc`
+        elif [ $ySize -lt 256 ]; then
+            uh_level1=`echo "scale=2; 1.6-(1.0-$ySize/256.0)*1.4" | bc`
+        fi     		
+        ul_level2=0.2
+        uh_level2=3.2
+        ul_level3=0.8
+        uh_level3=6.4
+    else
+        ul_level1=0.15
+        uh_level1=1.0
+        ul_level2=0.2
+        uh_level2=1.6
+        ul_level3=1.0
+        uh_level3=4.0
+    fi
+
+    # in level 1
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level1,$uh_level1 -i$foregroundThre -x1 A2B_affine_level1.nii.gz A2B_affine_level1
+	run CalculateGaborTextures -s1 -o1 -u$ul_level1,$uh_level1 -i12 -x1 -M ${intermediateDIR}/B_byte_nothresholding.nii.gz B_level1 # to get a mask B_level1_mask.nii.gz
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level1,$uh_level1 -i$foregroundThre -x1 B_level1.nii.gz B_level1
+    # in level 2
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level2,$uh_level2 -i$foregroundThre -x2 A2B_affine_level2.nii.gz A2B_affine_level2
+    run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level2,$uh_level2 -i$foregroundThre -x2 B_level2.nii.gz B_level2
+    # in level 3
+	if [ ${numLevels} -eq 3 ]; then
+		run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level3,$uh_level3 -i$foregroundThre A2B_affine_level3.nii.gz A2B_affine_level3
+		run CalculateGaborTextures -s$numGaborScales -o$numGaborOrientations -u$ul_level3,$uh_level3 -i$foregroundThre B_level3.nii.gz B_level3
+	fi
+	
+    # generate list files
+    #
+    # changed on 11/23/2011, we utilize only the high- and mid-frequency Gabor
+    # attributes in mid-resolution deformation and only high-frequency Gabor
+    # attributes in fine-resolution deformation
+    if [ $xSize -lt 120 ] || [ $ySize -lt 120 ] || [ $zSize -lt 80 ]; then
+        run GenerateGaborListFile -s1 -o$numGaborOrientations A2B_affine_level1 Gabor_A_level1.lst
+        run GenerateGaborListFile -s1 -o$numGaborOrientations B_level1 Gabor_B_level1.lst
+    else
+        run GenerateGaborListFile -s1 -o2 -R A2B_affine_level1 Gabor_A_level1.lst
+        run GenerateGaborListFile -s1 -o2 -R B_level1 Gabor_B_level1.lst
+        echo A2B_affine_level1_3dHori_F_imag.0_0.nii.gz >> Gabor_A_level1.lst
+        echo A2B_affine_level1_3dVert_F_imag.0_0.nii.gz >> Gabor_A_level1.lst
+        echo B_level1_3dHori_F_imag.0_0.nii.gz >> Gabor_B_level1.lst
+        echo B_level1_3dVert_F_imag.0_0.nii.gz >> Gabor_B_level1.lst
+        num1=4
+        num2=6
+        sed -i.bak -e "1s/${num1}/${num2}/g" Gabor_A_level1.lst
+        sed -i.bak -e "1s/${num1}/${num2}/g" Gabor_B_level1.lst
+    fi
+    run GenerateGaborListFile -s2 -o$numGaborOrientations A2B_affine_level2 Gabor_A_level2.lst
+    run GenerateGaborListFile -s2 -o$numGaborOrientations B_level2 Gabor_B_level2.lst
+    if [ ${numLevels} -eq 3 ]; then
+        run GenerateGaborListFile -s$numGaborScales -o$numGaborOrientations A2B_affine_level3 Gabor_A_level3.lst
+        run GenerateGaborListFile -s$numGaborScales -o$numGaborOrientations B_level3 Gabor_B_level3.lst
+    fi
+	
+	# check gabor features, to remove the imaginary parts that might have been influenced by background noise (this part of code was added on 4/23/2013)
+	if [ $xSize -lt 120 ] || [ $ySize -lt 120 ] || [ $zSize -lt 80 ]; then
+		i=1
+	else
+		i=2
+	fi
+	while [ $i -le ${numLevels} ]; do
+		NFeaturesExtracted=`cat Gabor_A_level$i.lst |sed -n 1p`
+		NImagFeaturesExtracted=`echo "${NFeaturesExtracted}/2" | bc`
+		echo ${NFeaturesExtracted} > GaborUsed_A_level$i.lst
+		echo ${NFeaturesExtracted} > GaborUsed_B_level$i.lst
+		
+		NFeaturesUsed=0
+		indf=1
+		while [ ${indf} -le ${NImagFeaturesExtracted} ]; do
+			ind_imag=`echo "2+(${indf}-1)*2" | bc`
+			ind_real=`echo "3+(${indf}-1)*2" | bc`
+			
+			imagfeatureA=`cat Gabor_A_level$i.lst |sed -n ${ind_imag}p`
+			realfeatureA=`cat Gabor_A_level$i.lst |sed -n ${ind_real}p`
+			imagfeatureB=`cat Gabor_B_level$i.lst |sed -n ${ind_imag}p`
+			realfeatureB=`cat Gabor_B_level$i.lst |sed -n ${ind_real}p`
+			
+			execute --allow_fail -- CheckTwoImages -f ${imagfeatureA} ${realfeatureA}
+			sysflagA=`echo $?`
+			execute --allow_fail -- CheckTwoImages -f ${imagfeatureB} ${realfeatureB}
+			sysflagB=`echo $?`
+			if [ ${sysflagA} -eq 200 ] || [ ${sysflagB} -eq 200 ]; then # only keep the real part, because the imaginary part might have been influenced by background noise.
+				echo ${realfeatureA} >> GaborUsed_A_level${i}.lst
+				echo ${realfeatureB} >> GaborUsed_B_level${i}.lst
+				NFeaturesUsed=$(( ${NFeaturesUsed} + 1 ))
+			else
+				echo ${imagfeatureA} >> GaborUsed_A_level${i}.lst
+				echo ${realfeatureA} >> GaborUsed_A_level${i}.lst
+				echo ${imagfeatureB} >> GaborUsed_B_level${i}.lst
+				echo ${realfeatureB} >> GaborUsed_B_level${i}.lst
+				NFeaturesUsed=$(( ${NFeaturesUsed} + 2 ))
+			fi
+			
+			indf=$(( ${indf} + 1 ))
+		done
+		sed -i.bak -e "1s/${NFeaturesExtracted}/${NFeaturesUsed}/g" GaborUsed_A_level${i}.lst
+		sed -i.bak -e "1s/${NFeaturesExtracted}/${NFeaturesUsed}/g" GaborUsed_B_level${i}.lst		
+		i=$(( $i + 1 ))
+	done 
+	
+	if [ $xSize -ge 120 ] && [ $ySize -ge 120 ] && [ $zSize -ge 80 ]; then
+		if [ ${NFeaturesUsed} -ne ${NFeaturesExtracted} ]; then
+			run GenerateGaborListFile -s1 -o2 -R A2B_affine_level1 GaborUsed_A_level1.lst
+			run GenerateGaborListFile -s1 -o2 -R B_level1 GaborUsed_B_level1.lst
+		else
+			run cp -f Gabor_A_level1.lst GaborUsed_A_level1.lst
+			run cp -f Gabor_B_level1.lst GaborUsed_B_level1.lst
+		fi
+	fi
+fi
+
+
+# ----------------------------------------------------------------------------
+# change working directory
+cd ${intermediateDIR}
+sysflag=`echo $?`
+[ ${sysflag} -eq 0 ] || {
+    echo
+    error "Failed to change to directory ${intermediateDIR}!"
+    echo
+    exit 1
+}
+[ ${verbose} -gt 0 ] && {
+    echo
+    echo "Changed to directory ${intermediateDIR}"
+    echo
+}
+
+
+# ----------------------------------------------------------------------------
+echo "Step 6:   Deformably register images via attribute matching and mutual-saliency weighting (be patient, may take tens of minutes)..."
+
+if [ ${number_of_dimensions} == "2" ]; then
+	if [ ${distBetweenControlPointsY} -eq 0 ]; then # if distBetweenControlPointsX not defined by user, we determine it automatically
+		distBetweenControlPointsY=$(( ${xSize} / 25 ));
+		if [ ${distBetweenControlPointsY} -lt 4 ]; then
+			distBetweenControlPointsY=4  
+		fi	
+	fi    
+	args="-r${numLevels} -b${distBetweenControlPointsY}"
+    if [ ${keepIntermediateResultsOrNot} -eq 1 ]; then
+        args="${args} -I${intermediateDIR}"
+    fi 
+    args="${args} ${attributeDIR}/A2B_affine_level1.nii.gz ${attributeDIR}/B_level1.nii.gz"
+    args="${args} ${attributeDIR}/Gabor_"
+    args="${args} A2B.nii.gz DField.nii.gz"
+
+    run Deform2D $args
+else # -----------------------------------------------------------------------
+    args="-b${distBetweenControlPointsX},${distBetweenControlPointsY},${distBetweenControlPointsZ} -p"
+    args="${args} -r${numLevels} -C$mutualSaliencyOrNot -n$numDiscreteSamples -k${maxNumIterInEachResolution}"
+    args="${args} -s${label_factor} -m${manipulationMethod} -f${additionOrComposition}"
+    args="${args} -M2 -w1 -g${regularizationWeightMapped} -e$foregroundThre"
+    args="${args} -F${fastApproximationOrNot} -S${similarityMeasure}"
+	args="${args} -u${useMemory}"
+    if [ $keepIntermediateResultsOrNot -eq 1 ]||[ $mutualSaliencyOrNot -eq 2 ]; then
+        args="${args} -I${intermediateDIR}"
+    fi 
+    if [ ${inputmask} == 'NULL' ]; then
+        args="${args} -a${attributeDIR}/B_level1_mask.nii.gz"
+    else
+        args="${args} -a${inputmask_fullname} -A"
+    fi
+    if [ ${initDeformation} != 'NULL' ]; then
+        args="${args} -i${initDeformation_DeformableOnly}"
+    fi
+    args="${args} ${attributeDIR}/A2B_affine_level1.nii.gz ${attributeDIR}/B_level1.nii.gz"
+    args="${args} ${attributeDIR}/GaborUsed_"
+    args="${args} A2B.nii.gz DField.nii.gz"
+
+    run Deform3D $args
+fi
+
+# ----------------------------------------------------------------------------
+if [ ${affineOrNot} != "0" ]; then
+    echo "Step 7:   Combine affine and deformable transformation into unified deformation..."
+    run CombineTransforms -c -f ${inputImgA_fullname} -t ${inputImgB_fullname} ${MatA2BAffine} DField.nii.gz ${deformationFieldA2B_fullname}
+else
+    echo "Step 7:   Skip combination of affine and deformable transformation as affine registration was not performed."
+    run mv -f DField.nii.gz ${deformationFieldA2B_fullname}
+fi
+
+
+# ----------------------------------------------------------------------------
+echo "Step 8:   Warp input image and write output files..."
+
+cd ${outputImgA2B_path}
+sysflag=`echo $?`
+[ ${sysflag} -eq 0 ] || {
+    echo
+    error "Failed to change to directory ${outputImgA2B_path}!"
+    echo
+    exit 1
+}
+[ ${verbose} -gt 0 ] && {
+    echo
+    echo "Changed to directory ${outputImgA2B_path}"
+    echo
+}
+
+run ApplyTransform -v ${inputImgA_fullname} ${deformationFieldA2B_fullname} ${outputImgA2B_fullname}
+
+if [ $mutualSaliencyOrNot -eq 2 ]; then
+    run cp -f ${intermediateDIR}/MutualSaliencyMap_level1.nii.gz MutualSaliencyMap_${prefixA2B}.nii.gz
+fi
+
+echo
+echo "Registered image has been saved to file $outputImgA2B, deformation to file $deformationFieldA2B"
+echo
+echo
+
+
+timeProgramEnd=`date +%s`
+timeElapsed_inSeconds=`expr $timeProgramEnd - $timeProgramBegin`
+timeElapsed_inMinutes=`echo "scale=2; $timeElapsed_inSeconds/60" | bc`
+echo "Total time used: $timeElapsed_inMinutes minutes."
+echo
+echo
+
+
+################################
+#
+### Calculate Jacobian determinant
+#
+################################
+
+if [ $Jacobian != 'NULL' ]; then
+    echo "Post-step: Calculate Jacobian determinant of deformation field..."
+    run CalculateJacobianMap ${deformationFieldA2B_fullname} ${Jacobian_fullname}
+fi
+
+
+################################
+#
+### Calculate RAVENS maps
+#
+################################
+
+if [ $RAVENS != 'NULL' ]; then
+    echo "Post-step: Calculate RAVENS maps..."
+    run CalculateRavensMaps -m ${labelValues} ${LabelMap_fullname} ${inputImgA_fullname} ${deformationFieldA2B_fullname} ${RAVENS_path}/${RAVENS_prefix}
+fi
+
+
+################################
+#
+### Warp another image
+#
+################################
+
+if [ ${WarpedImage} != 'NULL' ]; then
+    echo "Post-step: Warp another image using obtained deformation..."
+    if [ ${interpolationWarp} == 0 ]; then  # nearest neighbor interpolation
+        run ApplyTransform -v -n ${LabelMap_fullname} ${deformationFieldA2B_fullname} ${WarpedImage_fullname}
+    else
+        run ApplyTransform -v ${LabelMap_fullname} ${deformationFieldA2B_fullname} ${WarpedImage_fullname}
+    fi
+fi
+
+
+
+
+
+
+###############################
+#
+### At the end, prompt possible failure message for registration (results fail, not program fail)
+#
+###############################
+if [ ${affineOrNot} != 0 ]&[ "`echo ${chosencc} '<' 0.5 |bc -l`" -eq 1 ]; then
+	echo -e "\e[00;31m ------------Warning------------- \e[00m"
+	echo -e "\e[00;31m Registration results may be wrong (although dramms program finishes successfully). \e[00m"
+	echo -e "\e[00;31m This is usually the case when two input images are largely different in structures/contents, that even affine registration may fail. \e[00m"
+	echo ""
+	echo -e "\e[00;31m One possible solution is to re-do affine registration outside dramms scope. \e[00m"
+	echo -e "\e[00;31m After having obtained a reasonable affine result (please visualize and check), \e[00m"
+	echo -e "\e[00;31m Then re-run dramms with input A2B_affine and B, meanwhile turning off the affine registration within dramms ('-a 0' option). \e[00m"
+	echo -e "\e[00;31m -------------------------------- \e[00m"
+	echo ""
+fi
+
+
+exit 0

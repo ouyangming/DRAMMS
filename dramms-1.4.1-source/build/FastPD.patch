@@ -1,0 +1,1744 @@
+diff -rpN FastPD_DemoVersion/CMakeLists.txt FastPD_DRAMMSVersion/CMakeLists.txt
+*** FastPD_DemoVersion/CMakeLists.txt	Wed Dec 31 19:00:00 1969
+--- FastPD_DRAMMSVersion/CMakeLists.txt	Thu Jan 24 16:12:02 2013
+***************
+*** 0 ****
+--- 1,18 ----
++ cmake_minimum_required(VERSION 2.6)
++ 
++ project(DRAMMSFastPD)
++ 
++ add_library(dramms_fastpd STATIC src/graph.cpp src/LinkedBlockList.cpp src/maxflow.cpp)
++ 
++ install(TARGETS dramms_fastpd DESTINATION lib)
++ install(FILES src/Fast_PD.h src/block.h src/common.h src/graph.h src/LinkedBlockList.h DESTINATION include/dramms/fastpd)
++ 
++ set(INCLUDE_DIR "${DRAMMSFastPD_SOURCE_DIR}/src")
++ get_target_property(LIBRARY dramms_fastpd LOCATION)
++ configure_file(DRAMMSFastPDConfig.cmake.in "${DRAMMSFastPD_BINARY_DIR}/DRAMMSFastPDConfig.cmake" @ONLY)
++ 
++ set(INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include/dramms/fastpd")
++ get_filename_component(LIBRARY "${LIBRARY}" NAME)
++ set(LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/${LIBRARY}")
++ configure_file(DRAMMSFastPDConfig.cmake.in "${DRAMMSFastPD_BINARY_DIR}/DRAMMSFastPDConfig.cmake.install" @ONLY)
++ install(FILES "${DRAMMSFastPD_BINARY_DIR}/DRAMMSFastPDConfig.cmake.install" DESTINATION lib RENAME DRAMMSFastPDConfig.cmake)
+diff -rpN FastPD_DemoVersion/DRAMMSFastPDConfig.cmake.in FastPD_DRAMMSVersion/DRAMMSFastPDConfig.cmake.in
+*** FastPD_DemoVersion/DRAMMSFastPDConfig.cmake.in	Wed Dec 31 19:00:00 1969
+--- FastPD_DRAMMSVersion/DRAMMSFastPDConfig.cmake.in	Thu Jan 24 16:12:02 2013
+***************
+*** 0 ****
+--- 1,2 ----
++ set (DRAMMSFastPD_INCLUDE_DIR "@INCLUDE_DIR@")
++ set (DRAMMSFastPD_LIBRARY     "@LIBRARY@")
+diff -rpN FastPD_DemoVersion/src/Fast_PD.h FastPD_DRAMMSVersion/src/Fast_PD.h
+*** FastPD_DemoVersion/src/Fast_PD.h	Thu Jan 24 15:47:55 2013
+--- FastPD_DRAMMSVersion/src/Fast_PD.h	Thu Jan 24 16:15:56 2013
+*************** class CV_Fast_PD
+*** 48,54 ****
+          {
+  			int i;
+  
+! 			printf( "Allocating memory..." );
+  			clock_t start = clock();
+  
+  			// Init global vars and allocate memory
+--- 48,54 ----
+          {
+  			int i;
+  
+! 			printf( "\nAllocating memory..." );
+  			clock_t start = clock();
+  
+  			// Init global vars and allocate memory
+*************** class CV_Fast_PD
+*** 77,83 ****
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
+  			}
+  			for( i = 0; i < _numpoints; i++ )
+  			{
+--- 77,83 ----
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(1);
+  			}
+  			for( i = 0; i < _numpoints; i++ )
+  			{
+*************** class CV_Fast_PD
+*** 93,99 ****
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
+  			}
+  			for( i = 0; i < _numlabels; i++ )
+  			{
+--- 93,99 ----
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(1);
+  			}
+  			for( i = 0; i < _numlabels; i++ )
+  			{
+*************** class CV_Fast_PD
+*** 103,115 ****
+  				}
+  				catch(...)
+  				{
+! 					printf( "Error: cannot allocate memory...aborting\n" ); exit(0);
+  				}
+  				fillGraph( _all_graphs[i] );
+  				if ( DIST(i,i) )
+  				{
+  					printf( "Error: this version assumes that PAIRWISE_POTENTIAL(a,a) = 0 for any label a\n" );
+! 					exit(0);
+  				}
+  			}
+  
+--- 103,115 ----
+  				}
+  				catch(...)
+  				{
+! 					printf( "Error: cannot allocate memory...aborting\n" ); exit(1);
+  				}
+  				fillGraph( _all_graphs[i] );
+  				if ( DIST(i,i) )
+  				{
+  					printf( "Error: this version assumes that PAIRWISE_POTENTIAL(a,a) = 0 for any label a\n" );
+! 					exit(1);
+  				}
+  			}
+  
+*************** class CV_Fast_PD
+*** 120,126 ****
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
+  			}
+  			createNeighbors();
+  
+--- 120,126 ----
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(1);
+  			}
+  			createNeighbors();
+  
+*************** class CV_Fast_PD
+*** 131,144 ****
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
+  			}
+  
+  			clock_t finish = clock();
+  			float t = (float) ((double)(finish - start) / CLOCKS_PER_SEC);
+  			printf( "Done\n" );
+  
+! 			if ( t >= MAX((double)(_numpoints*MAX(_numlabels,5))/(double)(110000*16),1) )
+  			{
+  				printf( "========\n" );
+  				printf( "WARNING: algorithm may be very slow due to swapping from disk\n" ); 
+--- 131,144 ----
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(1);
+  			}
+  
+  			clock_t finish = clock();
+  			float t = (float) ((double)(finish - start) / CLOCKS_PER_SEC);
+  			printf( "Done\n" );
+  
+! 			if ( t >= kMAX((double)(_numpoints*kMAX(_numlabels,5))/(double)(110000*16),1) )
+  			{
+  				printf( "========\n" );
+  				printf( "WARNING: algorithm may be very slow due to swapping from disk\n" ); 
+*************** class CV_Fast_PD
+*** 172,178 ****
+  
+  		void init_duals_primals( void )
+  		{
+! 			printf( "Initializing..." );
+  
+  			// Set initial values for primal and dual variables
+  			//
+--- 172,178 ----
+  
+  		void init_duals_primals( void )
+  		{
+! 			printf( "\nInitializing..." );
+  
+  			// Set initial values for primal and dual variables
+  			//
+*************** class CV_Fast_PD
+*** 703,709 ****
+  
+  			// Run max-flow 
+  			//
+! 			Graph::flowtype max_flow = _graph -> apply_maxflow(0);
+  
+  			// Traverse source tree to update the primal variables 
+  			//
+--- 703,709 ----
+  
+  			// Run max-flow 
+  			//
+! 			Graph::flowtype max_flow = _graph -> apply_maxflow(1);
+  
+  			// Traverse source tree to update the primal variables 
+  			//
+*************** class CV_Fast_PD
+*** 779,785 ****
+  			for( i = 0; i < num_children; i++ )
+  			{
+  				Graph::node *n = _children[i];
+! 				unsigned int id  = ((unsigned int)n - (unsigned int)_nodes) / sizeof(Graph::node); 
+  				Node_info *pinfo = &_pinfo[id];
+  
+  				// If necessary, repair "loads" in case of non-metric
+--- 779,785 ----
+  			for( i = 0; i < num_children; i++ )
+  			{
+  				Graph::node *n = _children[i];
+! 				unsigned int id  = (size_t)(n - _nodes) / sizeof(Graph::node);
+  				Node_info *pinfo = &_pinfo[id];
+  
+  				// If necessary, repair "loads" in case of non-metric
+*************** class CV_Fast_PD
+*** 841,858 ****
+  				_APF_change_time = _time;
+  		}
+  
+!         void run( void )
+          {
+  			double total_t = 0, total_augm = 0;
+  			init_duals_primals();
+  
+  			int iter = 0;
+  			while ( iter < _max_iters )
+  			{
+  				double prev_APF = _APF;
+  				_iter = iter;
+  
+! 				printf( "Iteration %d ", iter );
+  				clock_t start = clock();
+  				if ( !iter )
+  				{
+--- 841,865 ----
+  				_APF_change_time = _time;
+  		}
+  
+!         double run(double energy)
+          {
+  			double total_t = 0, total_augm = 0;
+  			init_duals_primals();
+  
++ 			double _APFLast = energy;
++ 			if (_APF>_APFLast*0.98)
++ 				_max_iters = 0; // if inital energy in this iteration (_APF) is greater than 98% the initial energy of last iteration (energy), converge -- quit without optimize
++ 			else
++ 				_APFLast = _APF;
++ 
+  			int iter = 0;
+  			while ( iter < _max_iters )
+  			{
+  				double prev_APF = _APF;
+  				_iter = iter;
+  
+! 				printf( "\nIteration %d ", iter );
+! 				fflush( stdout );
+  				clock_t start = clock();
+  				if ( !iter )
+  				{
+*************** class CV_Fast_PD
+*** 868,873 ****
+--- 875,883 ----
+  				float t = (float) ((double)(finish - start) / CLOCKS_PER_SEC);
+  				total_t += t;
+  				printf( "(%.3f secs)\n", t );
++ 				fflush( stdout );
++ 				printf("prev_APF = %f, APF = %f\n", prev_APF, _APF);
++ 				fflush( stdout );
+  
+  				if ( prev_APF <= _APF )
+  					break;
+*************** class CV_Fast_PD
+*** 875,880 ****
+--- 885,896 ----
+  				iter++;
+  			}
+  			printf( "Converged (total time = %f secs)\n", total_t );
++ 			fflush( stdout );
++ 
++ 			if ((_APF<=energy*0.98) && (_APF>_APFLast*0.96))  
++ 				_APFLast = energy;    // if reduction of energy is less than 4%, converge
++ 
++ 			return _APFLast;
+          }
+  
+  		void fillGraph( Graph *_graph ) 
+*************** class CV_Fast_PD
+*** 894,900 ****
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
+  			}
+  
+  			for( i = 0; i < _numpoints; i++ )
+--- 910,916 ----
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(1);
+  			}
+  
+  			for( i = 0; i < _numpoints; i++ )
+*************** class CV_Fast_PD
+*** 923,929 ****
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
+  			}
+  
+  			for( i = 0; i < _numpairs; i++ )
+--- 939,945 ----
+  			}
+  			catch(...)
+  			{
+! 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(1);
+  			}
+  
+  			for( i = 0; i < _numpairs; i++ )
+*************** class CV_Fast_PD
+*** 942,951 ****
+  			}
+  		}
+  
+! 		double MAX( double a, double b ) { return ( a >= b ? a : b ); }
+! 		double MIN( double a, double b ) { return ( a <= b ? a : b ); }
+  
+! 		static void err_fun(char * msg)
+  		{
+  			printf("%s",msg);
+  		}
+--- 958,967 ----
+  			}
+  		}
+  
+! 		double kMAX( double a, double b ) { return ( a >= b ? a : b ); }
+! 		double kMIN( double a, double b ) { return ( a <= b ? a : b ); }
+  
+! 		static void err_fun(const char * msg)
+  		{
+  			printf("%s",msg);
+  		}
+diff -rpN FastPD_DemoVersion/src/Fast_PD.h~ FastPD_DRAMMSVersion/src/Fast_PD.h~
+*** FastPD_DemoVersion/src/Fast_PD.h~	Wed Dec 31 19:00:00 1969
+--- FastPD_DRAMMSVersion/src/Fast_PD.h~	Thu Jan 24 16:12:02 2013
+***************
+*** 0 ****
+--- 1,1035 ----
++ //#############################################################################
++ //#
++ //# Fast_PD.h:
++ //#  Header file containing "CV_Fast_PD" class interface
++ //#  
++ //#############################################################################
++ 
++ #ifndef __FAST_PD_H__
++ #define __FAST_PD_H__
++ 
++ #include <math.h>
++ #include <stdio.h>
++ #include <assert.h>
++ #include <time.h>
++ #include <string.h>
++ #include "graph.h"
++ #include "common.h"
++ 
++ #define DIST(l0,l1)   (_dist[l1*_numlabels+l0])
++ #define UPDATE_BALANCE_VAR0(y,d,h0,h1) { (y)+=(d); (h0)+=(d); (h1)-=d; }
++ #define NEW_LABEL(n) ((n)->parent && !((n)->is_sink))
++ #define REV(a) ((a)+1)
++ 
++ //#############################################################################
++ //#
++ //# Classes & types
++ //#
++ //#############################################################################
++ 
++ //=============================================================================
++ // @class   CV_Fast_PD
++ // @author  Nikos Komodakis
++ //=============================================================================
++ //
++ class CV_Fast_PD
++ {
++ 	public:
++ 
++ 		typedef Graph::Real Real;
++ 
++ 		//
++ 		// NOTE: "lcosts" is modified by member functions of this class
++ 		//
++         CV_Fast_PD( int numpoints, int numlabels, Real *lcosts,
++ 		            int numpairs , int *pairs   , 
++ 		            Real *dist   , int max_iters, 
++ 		            Real *wcosts  )
++         {
++ 			int i;
++ 
++ 			printf( "\nAllocating memory..." );
++ 			clock_t start = clock();
++ 
++ 			// Init global vars and allocate memory
++ 			//
++         	_numpoints = numpoints;
++             _numlabels = numlabels;
++             _numpairs  = numpairs;
++ 			_max_iters = max_iters;
++ 			_dist      = dist;
++             _pairs     = pairs;  
++ 			_wcosts    = wcosts;
++ 			_time      =-1; 
++ 			_APF_change_time = -1;
++ 
++ 			if ( _numlabels >= pow((float)256,(int)sizeof(Graph::Label)) ) 
++ 			{
++ 				printf( "\nChange Graph::Label type (it is too small to hold all labels)\n" );
++ 				assert(0);
++ 			}
++ 				
++ 			try
++ 			{
++ 				_children          = new Graph::node *[_numpoints];
++ 				_source_nodes_tmp1 = new int[_numpoints]; 
++ 				_source_nodes_tmp2 = new int[_numpoints]; 
++ 			}
++ 			catch(...)
++ 			{
++ 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
++ 			}
++ 			for( i = 0; i < _numpoints; i++ )
++ 			{
++ 				_source_nodes_tmp1[i] = -2;
++ 				_source_nodes_tmp2[i] = -2;
++ 			}
++ 
++ 			try
++ 			{
++ 				_all_nodes = new Graph::node[_numpoints*_numlabels];
++ 				_all_arcs  = new Graph::arc[_numpairs*_numlabels<<1];
++ 				_all_graphs = new Graph *[_numlabels];
++ 			}
++ 			catch(...)
++ 			{
++ 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
++ 			}
++ 			for( i = 0; i < _numlabels; i++ )
++ 			{
++ 				try
++ 				{
++ 					_all_graphs[i] = new Graph( &_all_nodes[_numpoints*i], &_all_arcs[_numpairs*i<<1], _numpoints, err_fun );
++ 				}
++ 				catch(...)
++ 				{
++ 					printf( "Error: cannot allocate memory...aborting\n" ); exit(0);
++ 				}
++ 				fillGraph( _all_graphs[i] );
++ 				if ( DIST(i,i) )
++ 				{
++ 					printf( "Error: this version assumes that PAIRWISE_POTENTIAL(a,a) = 0 for any label a\n" );
++ 					exit(0);
++ 				}
++ 			}
++ 
++ 			_active_list = -1;
++ 			try
++ 			{
++ 				_pinfo = new Node_info[_numpoints];
++ 			}
++ 			catch(...)
++ 			{
++ 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
++ 			}
++ 			createNeighbors();
++ 
++ 			_h = lcosts;
++ 			try
++ 			{
++ 				_y = new Real[_numpairs*_numlabels];
++ 			}
++ 			catch(...)
++ 			{
++ 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
++ 			}
++ 
++ 			clock_t finish = clock();
++ 			float t = (float) ((double)(finish - start) / CLOCKS_PER_SEC);
++ 			printf( "Done\n" );
++ 
++ 			if ( t >= kMAX((double)(_numpoints*kMAX(_numlabels,5))/(double)(110000*16),1) )
++ 			{
++ 				printf( "========\n" );
++ 				printf( "WARNING: algorithm may be very slow due to swapping from disk\n" ); 
++ 				printf( "         (swapping will dominate the running time)\n" ); 
++ 				printf( "========\n" );
++ 			}
++         }
++ 
++ 		~CV_Fast_PD( void )
++ 		{
++ 			delete _all_nodes;
++ 			delete _all_arcs ;
++ 
++ 			Graph::Label i;
++ 			for( i = 0; i < _numlabels; i++ )
++ 				delete _all_graphs[i];
++ 			delete [] _all_graphs;
++ 
++ 			delete [] _einfo;
++ 			delete [] _y;
++ 
++ 			delete [] _pairs_arr;
++ 			delete [] _pair_info;
++ 
++ 			delete [] _pinfo;
++ 
++ 			delete [] _source_nodes_tmp1;
++ 			delete [] _source_nodes_tmp2;
++ 			delete [] _children;
++ 		}
++ 
++ 		void init_duals_primals( void )
++ 		{
++ 			printf( "\nInitializing..." );
++ 
++ 			// Set initial values for primal and dual variables
++ 			//
++ 			int i;
++ 			for( i = 0; i < _numpoints; i++ )
++ 			{
++ 				_pinfo[i].label =  0;
++ 				_pinfo[i].time  = -1;
++ 				_pinfo[i].next  = -1;
++ 				_pinfo[i].prev  = -2;
++ 			}
++ 
++ 			memset( _y, 0, _numpairs*_numlabels*sizeof(Real) );
++ 			for( i = 0; i < _numpairs; i++ )
++ 			{
++ 				int id0 = _einfo[i  ].tail;
++ 				int id1 = _einfo[i  ].head;
++ 				int l0  = _pinfo[id0].label;
++ 				int l1  = _pinfo[id1].label;
++ 
++ 				Real d  = _wcosts[i]*DIST(l0,l1) - (_y[l0*_numpairs+i]-_y[l1*_numpairs+i]);
++ 				if ( l0 == l1 )
++ 					assert( d == 0 );
++ 				else
++ 					UPDATE_BALANCE_VAR0( _y[l0*_numpairs+i], d, _h[l0*_numpoints+id0], _h[l0*_numpoints+id1] );
++ 
++ 				_einfo[i].balance = -_y[l1*_numpairs+i];
++ 			}
++ 
++ 			// Get initial primal function
++ 			//
++ 			_APF = 0;
++ 			for( i = 0; i < _numpoints; i++ )
++ 			{
++ 				_pinfo[i].height = _h[_pinfo[i].label*_numpoints+i];
++ 				_APF += _pinfo[i].height;
++ 			}
++ 
++ 			printf( "Done\n" );
++ 		}
++ 
++ 		void inner_iteration( Graph::Label label )
++ 		{
++ 			int i;
++ 
++ 			Graph       *_graph =  _all_graphs[label];
++ 			Graph::node *_nodes = &_all_nodes [_numpoints*label];
++ 			Graph::arc  *_arcs  = &_all_arcs  [(_numpairs*label)<<1];
++ 			Real        *_cur_y = &_y         [_numpairs*label];
++ 
++ 			_time++;
++ 			_graph->flow = 0;
++ 
++ 			if ( _APF_change_time < _time - _numlabels )
++ 				return;
++ 
++ 			// Update balance and height variables
++ 			//
++ 			Arc_info  *einfo = _einfo;
++ 			Graph::arc *arcs = _arcs;
++ 			Real *cur_y = &_y[_numpairs*label];
++ 			Real *cur_h = &_h[_numpoints*label];
++ 			for( i = 0; i < _numpairs; i++, einfo++, arcs+=2, cur_y++ )
++ 			{
++ 				int l0,l1;
++ 				if ( (l1=_pinfo[einfo->head].label) != label && (l0=_pinfo[einfo->tail].label) != label ) 
++ 				{
++ 					Real delta  = _wcosts[i]*(DIST(label,l1)+DIST(l0,label)-DIST(l0,l1));
++ 					Real delta1 = _wcosts[i]*DIST(label,l1)-( (*cur_y)+einfo->balance);
++ 					Real delta2;
++ 					if ( delta1 < 0 || (delta2=delta-delta1) < 0 ) 
++ 					{
++ 						UPDATE_BALANCE_VAR0( *cur_y, delta1, cur_h[einfo->tail], cur_h[einfo->head] )
++ 						arcs->cap = arcs->r_cap = 0;
++ 						if ( delta < 0 ) // This may happen only for non-metric distances
++ 						{
++ 							delta = 0;
++ 							_nodes[einfo->head].conflict_time = _time;
++ 							//_pair_info[i].conflict_time = _time;
++ 						}
++ 						REV(arcs)->r_cap = delta;
++ 					}
++ 					else
++ 					{
++ 						arcs->cap = arcs->r_cap = delta1;
++ 						REV(arcs)->r_cap = delta2;
++ 					}
++ 				}
++ 				else
++ 				{
++ 					arcs->cap = arcs->r_cap = 0;
++ 					REV(arcs)->r_cap = 0;
++ 				}
++ 			}
++ 
++ 			Real total_cap = 0;
++ 			Node_info *pinfo = _pinfo;
++ 			Graph::node *nodes = _nodes;
++ 			for( i = 0; i < _numpoints; i++, pinfo++, nodes++, cur_h++ )
++ 			{
++ 				Real delta = pinfo->height - (*cur_h);
++ 				nodes->tr_cap = delta;
++ 				if (delta > 0) total_cap += delta;
++ 			}
++ 			
++ 			// Run max-flow and update the primal variables
++ 			//
++ 			Graph::flowtype max_flow = _graph -> run_maxflow(1);
++ 			_APF -= (total_cap - max_flow);
++ 			if ( total_cap > max_flow )
++ 				_APF_change_time = _time;
++ 
++ 			cur_y = &_y[_numpairs*label];
++ 			einfo =  _einfo;
++ 			arcs  =  _arcs;
++ 			for( i = 0; i < _numpairs; i++, einfo++, arcs+=2, cur_y++ )
++ 				if ( _pinfo[einfo->head].label != label && _pinfo[einfo->tail].label != label )
++ 				{
++ 					if ( NEW_LABEL(&_nodes[einfo->head]) )
++ 						einfo->balance = -(*cur_y + arcs->cap - arcs->r_cap);
++ 				}
++ 				else if ( _pinfo[einfo->head].label != label )
++ 				{
++ 					if ( NEW_LABEL(&_nodes[einfo->head]) )
++ 						einfo->balance = -(*cur_y);
++ 				}
++ 
++ 			cur_h = &_h[_numpoints*label];
++ 			pinfo =  _pinfo;
++ 			nodes =  _nodes;
++ 			for( i = 0; i < _numpoints; i++, pinfo++, nodes++, cur_h++ )
++ 			{
++ 				if ( pinfo->label != label )
++ 				{
++ 					if ( NEW_LABEL(nodes) )
++ 					{
++ 						// If necessary, repair "loads" in case of non-metric
++ 						//
++ 						if ( nodes->conflict_time > pinfo->time )
++ 						{
++ 							int k;
++ 							for( k = 0; k < pinfo->num_pairs; k++)
++ 							{
++ 								int pid = pinfo->pairs[k];
++ 								if ( pid <= 0 )
++ 								{
++ 									Pair_info *pair = &_pair_info[-pid];
++ 									if ( !(_nodes[pair->i0].parent) || _nodes[pair->i0].is_sink)
++ 									{
++ 										Graph::Label l0 = _pinfo[pair->i0].label;
++ 										Graph::Label l1 =  pinfo->label;
++ 										Real delta = _wcosts[-pid]*(DIST(l0,label)+DIST(label,l1)-DIST(l0,l1));
++ 										//assert( l0 != label ); assert( delta<0 );
++ 										if ( delta < 0 )
++ 										{
++ 											_cur_y[-pid]  -= delta;
++ 											_einfo[-pid].balance = -_cur_y[-pid];
++ 											pinfo->height += delta; 
++ 											_APF          += delta;
++ 											_nodes[pair->i0].tr_cap += delta;
++ 										}
++ 									}
++ 								}
++ 							}
++ 						}
++ 
++ 						pinfo->label = label;
++ 						pinfo->height -= nodes->tr_cap;
++ 						nodes->tr_cap = 0;
++ 						pinfo->time = _time;
++ 					}
++ 				}
++ 				*cur_h = pinfo->height;
++ 			}
++ 		}
++ 
++ 		void inner_iteration_adapted( Graph::Label label )
++ 		{
++ 			if ( _iter > 1 )
++ 				return track_source_linked_nodes( label );
++ 
++ 			int i;
++ 			Graph       *_graph =  _all_graphs[label];
++ 			Graph::node *_nodes = &_all_nodes [_numpoints*label];
++ 			Graph::arc  *_arcs  = &_all_arcs  [(_numpairs*label)<<1];
++ 			Real        *_cur_y = &_y         [_numpairs*label];
++ 			Real        *_cur_h = &_h         [_numpoints*label];
++ 
++ 			_time++;
++ 			_graph->flow = 0;
++ 
++ 			if ( _APF_change_time < _time - _numlabels )
++ 				return;
++ 
++ 			// Update dual vars (i.e. balance and height variables)
++ 			//
++ 			int dt = _time - _numlabels;
++ 			for( i = 0; i < _numpairs; i++ )
++ 			{
++ 				int i0 = _pairs[ i<<1   ];
++ 				int i1 = _pairs[(i<<1)+1];
++ 				if ( _pinfo[i0].time >= dt || _pinfo[i1].time >= dt )
++ 				{
++ 					Graph::arc *arc0 = &_arcs[i<<1];
++ 
++ 					if ( _cur_h[i0] != _pinfo[i0].height )
++ 					{
++ 						Real h = _cur_h[i0] - _nodes[i0].tr_cap;
++ 						_nodes[i0].tr_cap = _pinfo[i0].height - h;
++ 						_cur_h[i0] = _pinfo[i0].height;
++ 					}
++ 
++ 					if ( _cur_h[i1] != _pinfo[i1].height )
++ 					{
++ 						Real h = _cur_h[i1] - _nodes[i1].tr_cap;
++ 						_nodes[i1].tr_cap = _pinfo[i1].height - h;
++ 						_cur_h[i1] = _pinfo[i1].height;
++ 					}
++ 
++ 					int l0,l1;
++ 					if ( (l0=_pinfo[i0].label) != label && (l1=_pinfo[i1].label) != label )
++ 					{
++ 						Graph::arc *arc1 = &_all_arcs[(_numpairs*l1+i)<<1];
++ 						Real y_pq =   _cur_y[i] + arc0->cap - arc0->r_cap ;
++ 						Real y_qp = -(_y[_numpairs*l1+i] + arc1->cap - arc1->r_cap);
++ 						Real delta  = _wcosts[i]*(DIST(label,l1)+DIST(l0,label)-DIST(l0,l1));
++ 						Real delta1 = _wcosts[i]*DIST(label,l1)-(y_pq+y_qp);
++ 						Real delta2;
++ 						if ( delta1 < 0 || (delta2=delta-delta1) < 0 ) // is change necessary?
++ 						{
++ 							_cur_y[i] = y_pq+delta1;
++ 							arc0->r_cap = arc0->cap = 0;
++ 							if ( delta < 0 ) // This may happen only for non-metric distances
++ 							{
++ 								delta = 0;
++ 								_nodes[i1].conflict_time = _time;
++ 							}
++ 							REV(arc0)->r_cap = delta;
++ 
++ 							_nodes[i0].tr_cap -= delta1;
++ 							_nodes[i1].tr_cap += delta1;
++ 						}
++ 						else
++ 						{
++ 							_cur_y[i] = y_pq;
++ 							arc0->r_cap = arc0->cap = delta1;
++ 							REV(arc0)->r_cap = delta2;
++ 						}
++ 					}
++ 					else
++ 					{
++ 						_cur_y[i] += arc0->cap - arc0->r_cap;
++ 						REV(arc0)->r_cap = arc0->r_cap = arc0->cap = 0;	
++ 					}
++ 				}
++ 			}
++ 
++ 			// Run max-flow and update the primal variables
++ 			//
++ 			assert( _iter <= 1 );
++ 			Graph::flowtype max_flow = _graph -> apply_maxflow(1);
++ 
++ 			double prev_APF = _APF;
++ 			for( i = 0; i < _numpoints; i++ )
++ 			{
++ 				Node_info *pinfo = &_pinfo[i];
++ 				if ( NEW_LABEL(&_nodes[i]) )
++ 				{
++ 					// If necessary, repair "loads" in case of non-metric
++ 					//
++ 					if ( _nodes[i].conflict_time > pinfo->time )
++ 					{
++ 						Real total_delta = 0;
++ 						int k;
++ 						for( k = 0; k < pinfo->num_pairs; k++)
++ 						{
++ 							int pid = pinfo->pairs[k];
++ 							if ( pid <= 0 )
++ 							{
++ 								Pair_info *pair = &_pair_info[-pid];
++ 								if ( !(_nodes[pair->i0].parent) || _nodes[pair->i0].is_sink)
++ 								{
++ 									Graph::Label l0 = _pinfo[pair->i0].label;
++ 									Graph::Label l1 =  pinfo->label;
++ 									Real delta = _wcosts[-pid]*(DIST(l0,label)+DIST(label,l1)-DIST(l0,l1));
++ 									//printf( "pid = %d, delta = %d\n", -pid, delta );
++ 									//assert( l0 != label ); assert( delta<0 );
++ 									
++ 									if ( delta < 0 )
++ 									{
++ 										_cur_y[-pid] -= delta;
++ 										total_delta  += delta;
++ 										_nodes[pair->i0].tr_cap += delta;
++ 									}
++ 								}
++ 							}
++ 						}
++ 						if ( total_delta )
++ 							_nodes[i].tr_cap -= total_delta;
++ 					}
++ 
++ 					pinfo->height -= _nodes[i].tr_cap; 
++ 					_APF          -= _nodes[i].tr_cap;
++ 					pinfo->time    = _time;
++ 					pinfo->label   = label;
++ 
++ 					if ( pinfo->prev == -2 ) // add to active list
++ 					{
++ 						pinfo->next = _active_list;
++ 						pinfo->prev = -1;
++ 						if (_active_list >= 0)
++ 							_pinfo[_active_list].prev = i;
++ 						_active_list = i;
++ 					}
++ 				}
++ 			}
++ 			if ( _APF < prev_APF )
++ 				_APF_change_time = _time;
++ 		}
++ 
++ 		void track_source_linked_nodes( Graph::Label label )
++ 		{
++ 			int i;
++ 			assert( _iter > 1 );
++ 
++ 			//
++ 			//
++ 			Graph       *_graph =  _all_graphs[label];
++ 			Graph::node *_nodes = &_all_nodes [_numpoints*label];
++ 			Graph::arc  *_arcs  = &_all_arcs  [(_numpairs*label)<<1];
++ 			Real        *_cur_y = &_y         [_numpairs*label];
++ 			Real        *_cur_h = &_h         [_numpoints*label];
++ 
++ 			//
++ 			//
++ 			_time++;
++ 			_graph->flow = 0;
++ 
++ 			if ( _APF_change_time < _time - _numlabels )
++ 				return;
++ 
++ 			int source_nodes_start1 = -1;
++ 			int source_nodes_start2 = -1;
++ 
++ 			// update active list of nodes
++ 			// 
++ 			int dt = _time - _numlabels;
++ 			i = _active_list;
++ 			while ( i >= 0 )
++ 			{
++ 				Node_info *n = &_pinfo[i];
++ 				int i_next = n->next;
++ 
++ 				if ( n->time >= dt )
++ 				{
++ 					if ( _cur_h[i] != n->height )
++ 					{
++ 						Real h = _cur_h[i] - _nodes[i].tr_cap;
++ 						_nodes[i].tr_cap = n->height - h;
++ 						_cur_h[i] = n->height;
++ 					}
++ 
++ 					if ( _nodes[i].tr_cap )
++ 					{
++ 						//assert(  _nodes[i].tr_cap < 0 );
++ 						_nodes[i].parent  = TERMINAL;
++ 						_nodes[i].is_sink = 1;
++ 						_nodes[i].DIST = 1;
++ 					}
++ 					else _nodes[i].parent = NULL;
++ 					//_nodes[i].TS = 0;
++ 				}
++ 				else // remove node from active list
++ 				{
++ 					int prev = n->prev;
++ 					if ( prev >= 0 )
++ 					{
++ 						_pinfo[prev].next = n->next;
++ 						if (n->next >= 0)
++ 							_pinfo[n->next].prev = prev;
++ 					}
++ 					else 
++ 					{
++ 						_active_list = n->next;
++ 						if ( _active_list >= 0 )
++ 							_pinfo[_active_list].prev = -1;
++ 					}
++ 					n->prev = -2;
++ 				}
++ 
++ 				i = i_next;
++ 			}
++ 
++ 			// Update balance and height variables.
++ 			// Also keep track and update source-linked-nodes.
++ 			//
++ 			i = _active_list;
++ 			while ( i >= 0 )
++ 			{
++ 				Node_info *n = &_pinfo[i];
++ 				int i_next = n->next;
++ 
++ 				int k;
++ 				Node_info *n0,*n1;
++ 				for( k = 0; k < n->num_pairs; k++)
++ 				{
++ 					int i0,i1,ii;
++ 					Pair_info *pair;
++ 					int pid = n->pairs[k];
++ 					if ( pid >= 0 )
++ 					{
++ 						pair = &_pair_info[pid];
++ 						if ( pair->time == _time )
++ 							continue;
++ 
++ 						i0 = i; i1 = pair->i1;
++ 						n0 = n; n1 = &_pinfo[i1];
++ 						ii = i1;
++ 					}
++ 					else
++ 					{
++ 						pid = -pid;
++ 						pair = &_pair_info[pid];
++ 						if ( pair->time == _time )
++ 							continue;
++ 
++ 						i1 = i; i0 = pair->i0;
++ 						n1 = n; n0 = &_pinfo[i0];
++ 						ii = i0;
++ 					}
++ 					pair->time = _time;
++ 
++ 					int l0,l1;
++ 					Graph::arc *arc0 = &_arcs[pid<<1];
++ 					if ( (l0=n0->label) != label && (l1=n1->label) != label )
++ 					{
++ 						Graph::arc *arc1 = &_all_arcs[(_numpairs*l1+pid)<<1];
++ 						Real y_pq =   _cur_y[pid] + arc0->cap - arc0->r_cap ;
++ 						Real y_qp = -(_y[_numpairs*l1+pid] + arc1->cap - arc1->r_cap);
++ 						Real delta  = _wcosts[pid]*(DIST(label,l1)+DIST(l0,label)-DIST(l0,l1));
++ 						Real delta1 = _wcosts[pid]*DIST(label,l1)-(y_pq+y_qp);
++ 						Real delta2;
++ 						if ( delta1 < 0 || (delta2=delta-delta1) < 0 )
++ 						{
++ 							_cur_y[pid] = y_pq+delta1;
++ 							arc0->r_cap = arc0->cap = 0;
++ 							if ( delta < 0 ) // This may happen only for non-metric distances
++ 							{
++ 								delta = 0;
++ 								_nodes[i1].conflict_time = _time;
++ 							}
++ 							REV(arc0)->r_cap = delta;
++ 
++ 							_nodes[i0].tr_cap -= delta1;
++ 							_nodes[i1].tr_cap += delta1;
++ 
++ 							if ( _pinfo[ii].prev == -2 && _source_nodes_tmp2[ii] == -2 )
++ 							{
++ 								_source_nodes_tmp2[ii] = source_nodes_start2;
++ 								source_nodes_start2 = ii;
++ 							}
++ 						}
++ 						else
++ 						{
++ 							_cur_y[pid] = y_pq;
++ 							arc0->r_cap = arc0->cap = delta1;
++ 							REV(arc0)->r_cap = delta2;
++ 						}
++ 					}
++ 					else
++ 					{
++ 						_cur_y[pid] += arc0->cap - arc0->r_cap;
++ 						REV(arc0)->r_cap = arc0->r_cap = arc0->cap = 0;	
++ 					}
++ 				}
++ 
++ 				Graph::node *nd = &_nodes[i];
++ 				if ( nd->tr_cap > 0 )
++ 				{
++ 					nd -> is_sink = 0;
++ 					nd -> parent = TERMINAL;
++ 					nd -> DIST = 1;
++ 
++ 					_graph->set_active(nd);
++ 					
++ 					_source_nodes_tmp1[i] = source_nodes_start1;
++ 					source_nodes_start1 = i;
++ 				}
++ 				else if (nd->tr_cap < 0)
++ 				{
++ 					nd -> is_sink = 1;
++ 					nd -> parent = TERMINAL;
++ 					nd -> DIST = 1;
++ 				}
++ 				else nd -> parent = NULL;
++ 				//n -> TS = 0;
++ 
++ 				i = i_next;
++ 			}
++ 
++ 			for( i = source_nodes_start2; i >= 0; )
++ 			{
++ 				Graph::node *nd = &_nodes[i];
++ 				if ( nd->tr_cap > 0 )
++ 				{
++ 					nd -> is_sink = 0;
++ 					nd -> parent = TERMINAL;
++ 					nd -> DIST = 1;
++ 
++ 					_graph->set_active(nd);
++ 					
++ 					_source_nodes_tmp1[i] = source_nodes_start1;
++ 					source_nodes_start1 = i;
++ 				}
++ 				else if (nd->tr_cap < 0)
++ 				{
++ 					nd -> is_sink = 1;
++ 					nd -> parent = TERMINAL;
++ 					nd -> DIST = 1;
++ 				}
++ 				else nd -> parent = NULL;
++ 				//n -> TS = 0;
++ 				
++ 				int tmp = i;
++ 				i = _source_nodes_tmp2[i];
++ 				_source_nodes_tmp2[tmp] = -2;
++ 			}
++ 
++ 			// Run max-flow 
++ 			//
++ 			Graph::flowtype max_flow = _graph -> apply_maxflow(1);
++ 
++ 			// Traverse source tree to update the primal variables 
++ 			//
++ 			double prev_APF = _APF;
++ 			int num_children = 0;
++ 			for( i = source_nodes_start1; i >= 0; )
++ 			{
++ 				Graph::node *n = &_nodes[i];
++ 				if ( n->parent == TERMINAL )
++ 				{
++ 					Node_info *pinfo = &_pinfo[i];
++ 
++ 					// If necessary, repair "loads" in case of non-metric
++ 					//
++ 					if ( n->conflict_time > pinfo->time )
++ 					{
++ 						Real total_delta = 0;
++ 						int k;
++ 						for( k = 0; k < pinfo->num_pairs; k++)
++ 						{
++ 							int pid = pinfo->pairs[k];
++ 							if ( pid <= 0 )
++ 							{
++ 								Pair_info *pair = &_pair_info[-pid];
++ 								if ( !(_nodes[pair->i0].parent) || _nodes[pair->i0].is_sink)
++ 								{
++ 									Graph::Label l0 = _pinfo[pair->i0].label;
++ 									Graph::Label l1 =  pinfo->label;
++ 									Real delta = _wcosts[-pid]*(DIST(l0,label)+DIST(label,l1)-DIST(l0,l1));
++ 									//assert( l0 != label ); assert( delta<0 );
++ 									
++ 									if ( delta < 0 )
++ 									{
++ 										_cur_y[-pid] -= delta;
++ 										total_delta  += delta;
++ 										_nodes[pair->i0].tr_cap += delta;
++ 									}
++ 								}
++ 							}
++ 						}
++ 						if ( total_delta )
++ 							n->tr_cap -= total_delta;
++ 					}
++ 
++ 					pinfo->height   -= n->tr_cap; 
++ 					_APF            -= n->tr_cap;
++ 					pinfo->label     = label;
++ 					pinfo->time      =_time;
++ 
++ 					if ( pinfo->prev == -2 ) // add to active list
++ 					{
++ 						pinfo->next = _active_list;
++ 						pinfo->prev = -1;
++ 						if (_active_list >= 0)
++ 							_pinfo[_active_list].prev = i;
++ 						_active_list = i;
++ 					}
++ 
++ 					Graph::arc *a;
++ 					for ( a=n->first; a; a=a->next )
++ 					{
++ 						Graph::node *ch = a->head;
++ 						if ( ch->parent == a->sister )
++ 							_children[num_children++] = ch;
++ 					}
++ 				}
++ 
++ 				int tmp = i;
++ 				i = _source_nodes_tmp1[i];
++ 				_source_nodes_tmp1[tmp] = -2;
++ 			}
++ 
++ 			for( i = 0; i < num_children; i++ )
++ 			{
++ 				Graph::node *n = _children[i];
++ 				unsigned int id  = (size_t)(n - _nodes) / sizeof(Graph::node);
++ 				Node_info *pinfo = &_pinfo[id];
++ 
++ 				// If necessary, repair "loads" in case of non-metric
++ 				//
++ 				if ( n->conflict_time > pinfo->time )
++ 				{
++ 					Real total_delta = 0;
++ 					int k;
++ 					for( k = 0; k < pinfo->num_pairs; k++)
++ 					{
++ 						int pid = pinfo->pairs[k];
++ 						if ( pid <= 0 )
++ 						{
++ 							Pair_info *pair = &_pair_info[-pid];
++ 							if ( !(_nodes[pair->i0].parent) || _nodes[pair->i0].is_sink)
++ 							{
++ 								Graph::Label l0 = _pinfo[pair->i0].label;
++ 								Graph::Label l1 =  pinfo->label;
++ 								Real delta = _wcosts[-pid]*(DIST(l0,label)+DIST(label,l1)-DIST(l0,l1));
++ 								//assert( l0 != label ); assert( delta<0 );
++ 
++ 								if ( delta < 0 )
++ 								{
++ 									_cur_y[-pid] -= delta;
++ 									total_delta  += delta;
++ 									_nodes[pair->i0].tr_cap += delta;
++ 								}
++ 							}
++ 						}
++ 					}
++ 					if ( total_delta )
++ 						n->tr_cap -= total_delta;
++ 				}
++ 
++ 				pinfo->height   -= n->tr_cap; 
++ 				_APF            -= n->tr_cap;
++ 				pinfo->label     = label;
++ 				pinfo->time      =_time;
++ 
++ 				if ( pinfo->prev == -2 ) // add to active list
++ 				{
++ 					pinfo->next = _active_list;
++ 					pinfo->prev = -1;
++ 					if (_active_list >= 0)
++ 						_pinfo[_active_list].prev = id;
++ 					_active_list = id;
++ 				}
++ 
++ 				Graph::arc *a;
++ 				for ( a=n->first; a; a=a->next )
++ 				{
++ 					Graph::node *ch = a->head;
++ 					if ( ch->parent == a->sister )
++ 						_children[num_children++] = ch;
++ 				}
++ 			}
++ 
++ 			if ( _APF < prev_APF )
++ 				_APF_change_time = _time;
++ 		}
++ 
++         double run(double energy)
++         {
++ 			double total_t = 0, total_augm = 0;
++ 			init_duals_primals();
++ 
++ 			double _APFLast = energy;
++ 			if (_APF>_APFLast*0.98)
++ 				_max_iters = 0; // if inital energy in this iteration (_APF) is greater than 98% the initial energy of last iteration (energy), converge -- quit without optimize
++ 			else
++ 				_APFLast = _APF;
++ 
++ 			int iter = 0;
++ 			while ( iter < _max_iters )
++ 			{
++ 				double prev_APF = _APF;
++ 				_iter = iter;
++ 
++ 				printf( "\nIteration %d ", iter );
++ 				fflush( stdout );
++ 				clock_t start = clock();
++ 				if ( !iter )
++ 				{
++ 					for( Graph::Label l = 0; l < _numlabels; l++ )
++ 						inner_iteration( l );
++ 				}
++ 				else 
++ 				{
++ 					for( Graph::Label l = 0; l < _numlabels; l++ )
++ 						inner_iteration_adapted( l );
++ 				}
++ 				clock_t finish = clock();
++ 				float t = (float) ((double)(finish - start) / CLOCKS_PER_SEC);
++ 				total_t += t;
++ 				printf( "(%.3f secs)\n", t );
++ 				fflush( stdout );
++ 				printf("prev_APF = %f, APF = %f\n", prev_APF, _APF);
++ 				fflush( stdout );
++ 
++ 				if ( prev_APF <= _APF )
++ 					break;
++ 
++ 				iter++;
++ 			}
++ 			printf( "Converged (total time = %f secs)\n", total_t );
++ 			fflush( stdout );
++ 
++ 			if ((_APF<=energy*0.98) && (_APF>_APFLast*0.96))  
++ 				_APFLast = energy;    // if reduction of energy is less than 4%, converge
++ 
++ 			return _APFLast;
++         }
++ 
++ 		void fillGraph( Graph *_graph ) 
++ 		{
++ 			_graph->add_nodes();
++ 			_graph->add_edges( _pairs, _numpairs );
++ 		}
++ 
++ 		void createNeighbors( void )
++ 		{
++ 			// Fill auxiliary structures related to neighbors
++ 			//
++ 			int i;
++ 			try
++ 			{
++ 				_pairs_arr = new int[_numpairs*2];
++ 			}
++ 			catch(...)
++ 			{
++ 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
++ 			}
++ 
++ 			for( i = 0; i < _numpoints; i++ )
++ 				_pinfo[i].num_pairs = 0;
++ 
++ 			for( i = 0; i < _numpairs; i++ )
++ 			{
++ 				int i0 = _pairs[i<<1];
++ 				int i1 = _pairs[(i<<1)+1];
++ 				_pinfo[i0].num_pairs++; 
++ 				_pinfo[i1].num_pairs++;
++ 			}
++ 
++ 			int offset = 0;
++ 			for( i = 0; i < _numpoints; i++ )
++ 			{
++ 				_pinfo[i].pairs = &_pairs_arr[offset];  
++ 				offset += _pinfo[i].num_pairs;
++ 				_pinfo[i].num_pairs = 0;
++ 			}
++ 
++ 			try
++ 			{
++ 				_pair_info = new Pair_info[_numpairs];
++ 				_einfo = new Arc_info[_numpairs];
++ 			}
++ 			catch(...)
++ 			{
++ 				printf( "\nError: cannot allocate memory...aborting\n" ); exit(0);
++ 			}
++ 
++ 			for( i = 0; i < _numpairs; i++ )
++ 			{
++ 				int i0 = _pairs[i<<1];
++ 				int i1 = _pairs[(i<<1)+1];
++ 				_pinfo[i0].pairs[_pinfo[i0].num_pairs++] =  i;
++ 				_pinfo[i1].pairs[_pinfo[i1].num_pairs++] = -i;
++ 
++ 				_einfo[i].tail = i0; 
++ 				_einfo[i].head = i1;
++ 
++ 				_pair_info[i].i0 = i0; 
++ 				_pair_info[i].i1 = i1;
++ 				_pair_info[i].time = -1;
++ 			}
++ 		}
++ 
++ 		double kMAX( double a, double b ) { return ( a >= b ? a : b ); }
++ 		double kMIN( double a, double b ) { return ( a <= b ? a : b ); }
++ 
++ 		static void err_fun(const char * msg)
++ 		{
++ 			printf("%s",msg);
++ 		}
++ 
++ 		struct Node_info
++ 		{
++ 			Graph::Label label; // current label
++ 			Real height; // active height of node
++ 			TIME time; // timestamp of change
++  			int next;    
++ 			int prev;
++ 			int *pairs; // neighboring edges
++ 			int num_pairs;
++ 		};
++ 
++         int           _numpoints;
++         int           _numpairs;
++         int           _numlabels;
++ 		int           _max_iters;
++         Real         *_h; // height variables
++ 		Real         *_y; // balance variables
++ 		Real         *_dist; // distance function for pairwise potential
++         int          *_pairs;
++ 		Graph::node  *_all_nodes; // Nodes and edges 
++ 		Graph::arc   *_all_arcs;  // of max-flow graphs
++ 		Graph       **_all_graphs;
++ 		int          *_source_nodes_tmp1; // Auxiliary lists for keeping
++ 		int          *_source_nodes_tmp2; // track of source-linked nodes
++ 		Real         *_wcosts; // Weights of MRF pairwise potentials
++ 		int           _iter;
++ 		Node_info    *_pinfo; // info per MRF node
++ 
++     private:
++ 
++ 		// auxiliary data structures and variables
++ 		//
++ 		struct Pair_info
++ 		{
++ 			int i0, i1;
++ 			TIME time;
++ 		};
++ 
++ 		struct Arc_info
++ 		{
++ 			int head, tail;
++ 			Real balance;
++ 		};
++ 
++ 		Arc_info     *_einfo;
++ 		double        _APF; // MRF energy
++ 		int           _time;
++ 		Pair_info    *_pair_info;
++ 		int           _active_list;
++ 		int           _APF_change_time;
++ 		Graph::node **_children;
++ 		int          *_pairs_arr;
++ 
++         // Assignment or copying are not allowed
++         //
++         CV_Fast_PD( const CV_Fast_PD &other );
++         CV_Fast_PD operator=( const CV_Fast_PD &other );
++ };
++ 
++ #endif /* __FAST_PD_H__ */
++ 
++ //#############################################################################
++ //#
++ //# EOF
++ //#
++ //#############################################################################
++ 
+diff -rpN FastPD_DemoVersion/src/block.h FastPD_DRAMMSVersion/src/block.h
+*** FastPD_DemoVersion/src/block.h	Thu Jan 24 15:47:54 2013
+--- FastPD_DRAMMSVersion/src/block.h	Thu Jan 24 16:12:02 2013
+*************** public:
+*** 105,111 ****
+  	   (optionally) the pointer to the function which
+  	   will be called if allocation failed; the message
+  	   passed to this function is "Not enough memory!" */
+! 	Block(int size, void (*err_function)(char *) = NULL) { first = last = NULL; block_size = size; error_function = err_function; }
+  
+  	/* Destructor. Deallocates all items added so far */
+  	~Block() { while (first) { block *next = first -> next; delete first; first = next; } }
+--- 105,111 ----
+  	   (optionally) the pointer to the function which
+  	   will be called if allocation failed; the message
+  	   passed to this function is "Not enough memory!" */
+! 	Block(int size, void (*err_function)(const char *) = NULL) { first = last = NULL; block_size = size; error_function = err_function; }
+  
+  	/* Destructor. Deallocates all items added so far */
+  	~Block() { while (first) { block *next = first -> next; delete first; first = next; } }
+*************** private:
+*** 192,198 ****
+  	block	*scan_current_block;
+  	Type	*scan_current_data;
+  
+! 	void	(*error_function)(char *);
+  };
+  
+  /***********************************************************************/
+--- 192,198 ----
+  	block	*scan_current_block;
+  	Type	*scan_current_data;
+  
+! 	void	(*error_function)(const char *);
+  };
+  
+  /***********************************************************************/
+*************** public:
+*** 206,212 ****
+  	   (optionally) the pointer to the function which
+  	   will be called if allocation failed; the message
+  	   passed to this function is "Not enough memory!" */
+! 	DBlock(int size, void (*err_function)(char *) = NULL) { first = NULL; first_free = NULL; block_size = size; error_function = err_function; }
+  
+  	/* Destructor. Deallocates all items added so far */
+  	~DBlock() { while (first) { block *next = first -> next; delete first; first = next; } }
+--- 206,212 ----
+  	   (optionally) the pointer to the function which
+  	   will be called if allocation failed; the message
+  	   passed to this function is "Not enough memory!" */
+! 	DBlock(int size, void (*err_function)(const char *) = NULL) { first = NULL; first_free = NULL; block_size = size; error_function = err_function; }
+  
+  	/* Destructor. Deallocates all items added so far */
+  	~DBlock() { while (first) { block *next = first -> next; delete first; first = next; } }
+*************** private:
+*** 260,266 ****
+  	block		*first;
+  	block_item	*first_free;
+  
+! 	void	(*error_function)(char *);
+  };
+  
+  
+--- 260,266 ----
+  	block		*first;
+  	block_item	*first_free;
+  
+! 	void	(*error_function)(const char *);
+  };
+  
+  
+diff -rpN FastPD_DemoVersion/src/graph.cpp FastPD_DRAMMSVersion/src/graph.cpp
+*** FastPD_DemoVersion/src/graph.cpp	Thu Jan 24 15:47:55 2013
+--- FastPD_DRAMMSVersion/src/graph.cpp	Thu Jan 24 16:12:02 2013
+***************
+*** 4,10 ****
+  #include <stdio.h>
+  #include "graph.h"
+  
+! Graph::Graph(node *nodes, arc *arcs, int num_nodes, void (*err_function)(char *))
+  {
+  	error_function = err_function;
+  	_nodes = nodes;
+--- 4,10 ----
+  #include <stdio.h>
+  #include "graph.h"
+  
+! Graph::Graph(node *nodes, arc *arcs, int num_nodes, void (*err_function)(const char *))
+  {
+  	error_function = err_function;
+  	_nodes = nodes;
+*************** void Graph::add_edges(int *pairs, int nu
+*** 58,64 ****
+  
+  void Graph::set_tweights(node_id i, captype cap_source, captype cap_sink)
+  {
+! 	flow += (cap_source < cap_sink) ? cap_source : cap_sink;
+  	((node*)i) -> tr_cap = cap_source - cap_sink;
+  }
+  
+--- 58,64 ----
+  
+  void Graph::set_tweights(node_id i, captype cap_source, captype cap_sink)
+  {
+! 	flow += (cap_source < cap_sink) ? (int)cap_source : (int)cap_sink;
+  	((node*)i) -> tr_cap = cap_source - cap_sink;
+  }
+  
+*************** void Graph::add_tweights(node_id i, capt
+*** 67,73 ****
+  	register captype delta = ((node*)i) -> tr_cap;
+  	if (delta > 0) cap_source += delta;
+  	else           cap_sink   -= delta;
+! 	flow += (cap_source < cap_sink) ? cap_source : cap_sink;
+  	((node*)i) -> tr_cap = cap_source - cap_sink;
+  }
+  
+--- 67,73 ----
+  	register captype delta = ((node*)i) -> tr_cap;
+  	if (delta > 0) cap_source += delta;
+  	else           cap_sink   -= delta;
+! 	flow += (cap_source < cap_sink) ? (int)cap_source : (int)cap_sink;
+  	((node*)i) -> tr_cap = cap_source - cap_sink;
+  }
+  
+diff -rpN FastPD_DemoVersion/src/graph.h FastPD_DRAMMSVersion/src/graph.h
+*** FastPD_DemoVersion/src/graph.h	Thu Jan 24 15:47:55 2013
+--- FastPD_DRAMMSVersion/src/graph.h	Thu Jan 24 16:12:02 2013
+*************** public:
+*** 115,121 ****
+  
+  	/* Type of edge weights.
+  	   Can be changed to char, int, float, double, ... */
+! 	typedef int Real;
+  	typedef Real captype;
+  
+  	/* Type of total flow */
+--- 115,121 ----
+  
+  	/* Type of edge weights.
+  	   Can be changed to char, int, float, double, ... */
+! 	typedef float Real; // MRF potentials are considered to be float
+  	typedef Real captype;
+  
+  	/* Type of total flow */
+*************** public:
+*** 202,208 ****
+  	Block<arc>			*arc_block;
+  	DBlock<nodeptr>		*nodeptr_block;
+  
+! 	void	(*error_function)(char *);	/* this function is called if a error occurs,
+  										   with a corresponding error message
+  										   (or exit(1) is called if it's NULL) */
+  
+--- 202,208 ----
+  	Block<arc>			*arc_block;
+  	DBlock<nodeptr>		*nodeptr_block;
+  
+! 	void	(*error_function)(const char *);	/* this function is called if a error occurs,
+  										   with a corresponding error message
+  										   (or exit(1) is called if it's NULL) */
+  
+*************** public:
+*** 212,220 ****
+  	   function which will be called if an error occurs;
+  	   an error message is passed to this function. If this
+  	   argument is omitted, exit(1) will be called. */
+! 	Graph(node *nodes, arc *arcs, int num_nodes, void (*err_function)(char *) = NULL);
+  
+! 	void Graph::reset_flow( void )
+  	{
+  		flow = 0;
+  	}
+--- 212,220 ----
+  	   function which will be called if an error occurs;
+  	   an error message is passed to this function. If this
+  	   argument is omitted, exit(1) will be called. */
+! 	Graph(node *nodes, arc *arcs, int num_nodes, void (*err_function)(const char *) = NULL);
+  
+! 	void reset_flow( void )
+  	{
+  		flow = 0;
+  	}
+*************** public:
+*** 249,255 ****
+  	is empty, it is replaced by the second queue
+  	(and the second queue becomes empty).
+  	*/
+! 	inline void Graph::set_active(node *i)
+  	{
+  		if (!i->next)
+  		{
+--- 249,255 ----
+  	is empty, it is replaced by the second queue
+  	(and the second queue becomes empty).
+  	*/
+! 	inline void set_active(node *i)
+  	{
+  		if (!i->next)
+  		{
+diff -rpN FastPD_DemoVersion/src/maxflow.cpp FastPD_DRAMMSVersion/src/maxflow.cpp
+*** FastPD_DemoVersion/src/maxflow.cpp	Thu Jan 24 15:47:55 2013
+--- FastPD_DRAMMSVersion/src/maxflow.cpp	Thu Jan 24 16:12:02 2013
+*************** void Graph::augment(arc *middle_arc)
+*** 167,173 ****
+  		i->parent = NULL;
+  	}
+  
+! 	flow += bottleneck;
+  }
+  
+  /***********************************************************************/
+--- 167,173 ----
+  		i->parent = NULL;
+  	}
+  
+! 	flow += (int)bottleneck;
+  }
+  
+  /***********************************************************************/
+*************** void Graph::process_source_orphan(node *
+*** 223,229 ****
+  		}
+  	}
+  
+! 	if (i->parent = a0_min)
+  	{
+  		i -> TS = TIME;
+  		i -> DIST = d_min + 1;
+--- 223,229 ----
+  		}
+  	}
+  
+! 	if ((i->parent = a0_min))
+  	{
+  		i -> TS = TIME;
+  		i -> DIST = d_min + 1;
+*************** void Graph::process_sink_orphan(node *i)
+*** 307,313 ****
+  		}
+  	}
+  
+! 	if (i->parent = a0_min)
+  	{
+  		i -> TS = TIME;
+  		i -> DIST = d_min + 1;
+--- 307,313 ----
+  		}
+  	}
+  
+! 	if ((i->parent = a0_min))
+  	{
+  		i -> TS = TIME;
+  		i -> DIST = d_min + 1;
+*************** Graph::flowtype Graph::apply_maxflow( in
+*** 354,360 ****
+  
+  	while ( 1 )
+  	{
+! 		if (i=current_node)
+  		{
+  			i -> next = NULL; /* remove active flag */
+  			if (!i->parent) i = NULL;
+--- 354,360 ----
+  
+  	while ( 1 )
+  	{
+! 		if ((i=current_node))
+  		{
+  			i -> next = NULL; /* remove active flag */
+  			if (!i->parent) i = NULL;
+*************** Graph::flowtype Graph::apply_maxflow( in
+*** 405,416 ****
+  			/* augmentation end */
+  
+  			/* adoption */
+! 			while (np=orphan_first)
+  			{
+  				np_next = np -> next;
+  				np -> next = NULL;
+  
+! 				while (np=orphan_first)
+  				{
+  					orphan_first = np -> next;
+  					i = np -> ptr;
+--- 405,416 ----
+  			/* augmentation end */
+  
+  			/* adoption */
+! 			while ((np=orphan_first))
+  			{
+  				np_next = np -> next;
+  				np -> next = NULL;
+  
+! 				while ((np=orphan_first))
+  				{
+  					orphan_first = np -> next;
+  					i = np -> ptr;
+*************** void Graph::do_augment(arc *middle_arc)
+*** 570,576 ****
+  		orphan_first = np;
+  	}
+  
+! 	flow += bottleneck;
+  }
+  
+  
+--- 570,576 ----
+  		orphan_first = np;
+  	}
+  
+! 	flow += (int)bottleneck;
+  }
+  
+  
+*************** Graph::flowtype Graph::run_maxflow( int 
+*** 587,593 ****
+  
+  	while ( 1 )
+  	{
+! 		if (i=current_node)
+  		{
+  			i -> next = NULL; /* remove active flag */
+  			if (!i->parent) i = NULL;
+--- 587,593 ----
+  
+  	while ( 1 )
+  	{
+! 		if ((i=current_node))
+  		{
+  			i -> next = NULL; /* remove active flag */
+  			if (!i->parent) i = NULL;
+*************** Graph::flowtype Graph::run_maxflow( int 
+*** 663,674 ****
+  			/* augmentation end */
+  
+  			/* adoption */
+! 			while (np=orphan_first)
+  			{
+  				np_next = np -> next;
+  				np -> next = NULL;
+  
+! 				while (np=orphan_first)
+  				{
+  					orphan_first = np -> next;
+  					i = np -> ptr;
+--- 663,674 ----
+  			/* augmentation end */
+  
+  			/* adoption */
+! 			while ((np=orphan_first))
+  			{
+  				np_next = np -> next;
+  				np -> next = NULL;
+  
+! 				while ((np=orphan_first))
+  				{
+  					orphan_first = np -> next;
+  					i = np -> ptr;
