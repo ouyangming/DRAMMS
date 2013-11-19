@@ -2,7 +2,7 @@ DRAMMS Image Registration Toolbox
 =======================================================
 
 
-**Introduction**: DRAMMS is a software package designed for 2D-to-2D and 3D-to-3D medical image registration tasks.
+**Introduction**: DRAMMS is a software package designed for 2D-to-2D and 3D-to-3D deformable medical image registration tasks.
 
 
 
