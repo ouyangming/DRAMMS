@@ -1,30 +1,35 @@
-DRAMMS
-======
+DRAMMS Image Registration Toolbox 
+=======================================================
 
 
-A Generic Medical Image Registration Toolbox 
-----------------------------------------------------
-
-Download:     folder dramms-1.4.1 here
-              or
-              http://www.rad.upenn.edu/sbia/software/dramms/download.html
-Installation: http://www.rad.upenn.edu/sbia/software/dramms/installation.html
-
-
-DRAMMS is a software package designed for 2D-to-2D and 3D-to-3D medical image registration tasks.
+**Introduction**: DRAMMS is a software package designed for 2D-to-2D and 3D-to-3D medical image registration tasks.
 
 
 
-..  Some typical applications of DRAMMS include,
+**Download**:     github folder dramms-1.4.1 (https://github.com/ouyangming/DRAMMS/tree/master/dramms-1.4.1-source)
 
-..  -- Cross-subject registration of the same organ (can be brain, breast, cardiac, etc);
+or DRAMMS website (http://www.rad.upenn.edu/sbia/software/dramms/download.html)
 
-..  -- Mono- and Multi-modality registration (MRI, CT, histology);
-
-..  -- Longitudinal registration (pediatric brain growth, cancer development, mouse brain development, etc);
-
-..  -- Registration under missing correspondences (e.g., vascular lesions, tumors, histological cuts).
+**Installation**: http://www.rad.upenn.edu/sbia/software/dramms/installation.html
 
 
+**Applications**: Some typical applications of DRAMMS include, but are not subject to,
 
-DRAMMS is implemented as a Unix command-line tool. It is fully automatic and easy to use — users input two images, and DRAMMS will output the registered image and the associated deformation. No need for pre-segmentation of structures, or prior knowledge, or human initialization/interventions.
+- Cross-subject registration of the same organ (can be brain, breast, cardiac, etc);
+
+- Mono- and Multi-modality registration (MRI, CT, histology);
+
+- Longitudinal registration (pediatric brain growth, cancer development, mouse brain development, etc);
+
+- Registration under missing correspondences (e.g., vascular lesions, tumors, histological cuts).
+
+
+**Features**:
+
+- Fully-automatic --- no need for segmentation or any prior knowledge or user-initialization/intervention;
+
+- User-friendly --- two input images, two output (the registered image and the deformaiton field);
+- Generality --- default parameters work reasonably well for most cases (raw images, preprocessed images, multi-site data, etc)
+ 
+
+**Environment**: runs in UNIX/Mac, takes Nifti/ANALYZE/MetaImage format.
