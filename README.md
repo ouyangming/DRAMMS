@@ -13,7 +13,7 @@ or DRAMMS website (http://www.rad.upenn.edu/sbia/software/dramms/download.html)
 **Installation**: http://www.rad.upenn.edu/sbia/software/dramms/installation.html
 
 
-**Applications**: Some typical applications of DRAMMS include, but are not subject to,
+**Applications**: Some typical applications of DRAMMS include, but are not limited to,
 
 - Cross-subject registration of the same organ (can be brain, breast, cardiac, etc);
 
