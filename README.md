@@ -35,3 +35,7 @@ or DRAMMS website (http://www.rad.upenn.edu/sbia/software/dramms/download.html)
 **Environment**: runs in UNIX/Mac, takes Nifti/ANALYZE/MetaImage format.
 
 **Demonstration & Tutorial**: http://www.rad.upenn.edu/sbia/software/dramms/tutorials.html
+
+**Software development**: Yangming Ou, Andreas Schuh, Aris Sotiras, Christos Davatzikos (advisor).
+
+**Algorithm authors**: Yangming Ou, Aris Sotiras, Nikos Paragios, Christos Davatzikos.
