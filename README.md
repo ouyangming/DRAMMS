@@ -36,6 +36,12 @@ or DRAMMS website (http://www.rad.upenn.edu/sbia/software/dramms/download.html)
 
 **Demonstration & Tutorial**: http://www.rad.upenn.edu/sbia/software/dramms/tutorials.html
 
+
+
+-----
+
 **Software development**: Yangming Ou, Andreas Schuh, Aris Sotiras, Christos Davatzikos (advisor).
 
 **Algorithm authors**: Yangming Ou, Aris Sotiras, Nikos Paragios, Christos Davatzikos.
+
+**Released by**: Section of Biomedical Image Analysis (SBIA), University of Pennsylvania
