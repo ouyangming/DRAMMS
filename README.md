@@ -6,11 +6,11 @@ DRAMMS Image Registration Toolbox
 
 
 
-**Download**:     github folder dramms-1.4.1 (https://github.com/ouyangming/DRAMMS/tree/master/dramms-1.4.1-source)
+**Download**:     github folder dramms-1.4.2 (https://github.com/ouyangming/DRAMMS/tree/master/dramms-1.4.2-source)
 
-or DRAMMS website (http://www.rad.upenn.edu/sbia/software/dramms/download.html)
+or DRAMMS website (http://www.cbica.upenn.edu/sbia/software/dramms/download.html)
 
-**Installation**: http://www.rad.upenn.edu/sbia/software/dramms/installation.html
+**Installation**: http://www.cbica.upenn.edu/sbia/software/dramms/installation.html
 
 
 **Applications**: Some typical applications of DRAMMS include, but are not limited to,
@@ -34,7 +34,7 @@ or DRAMMS website (http://www.rad.upenn.edu/sbia/software/dramms/download.html)
 
 **Environment**: runs in UNIX/Mac, takes Nifti/ANALYZE/MetaImage format.
 
-**Demonstration & Tutorial**: http://www.rad.upenn.edu/sbia/software/dramms/tutorials.html
+**Demonstration & Tutorial**: http://www.cbica.upenn.edu/sbia/software/dramms/tutorials.html
 
 
 
